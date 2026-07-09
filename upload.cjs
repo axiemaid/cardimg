@@ -139,9 +139,35 @@ async function main() {
   console.log('\nBroadcasting...')
   const txid = await broadcast(tx.serialize())
   
+  // Track pending transaction
+  const pendingPath = path.join(__dirname, 'pending.json')
+  let pending = []
+  if (fs.existsSync(pendingPath)) {
+    pending = JSON.parse(fs.readFileSync(pendingPath, 'utf8'))
+  }
+  pending.push({ txid, hash, size: imageBuf.length, uploadedAt: Date.now() })
+  fs.writeFileSync(pendingPath, JSON.stringify(pending, null, 2))
+  
+  // Also save image to cache immediately for zero-conf display
+  const imgCachePath = path.join(__dirname, 'images', `${hash}.bin`)
+  fs.mkdirSync(path.dirname(imgCachePath), { recursive: true })
+  fs.writeFileSync(imgCachePath, imageBuf)
+  
+  // Update mempool cache
+  const mempoolPath = path.join(__dirname, 'mempool.json')
+  let mempool = { cards: {}, lastScan: 0 }
+  if (fs.existsSync(mempoolPath)) {
+    mempool = JSON.parse(fs.readFileSync(mempoolPath, 'utf8'))
+  }
+  mempool.cards[hash] = { txid, size: imageBuf.length, blockHeight: null }
+  mempool.lastScan = Date.now()
+  fs.writeFileSync(mempoolPath, JSON.stringify(mempool, null, 2))
+  
   console.log('\n✓ Uploaded!')
   console.log('TXID:', txid)
+  console.log('Hash:', hash)
   console.log('View:', `https://whatsonchain.com/tx/${txid}`)
+  console.log('(Zero-conf: will appear in viewer immediately)')
 }
 
 main().catch(e => {

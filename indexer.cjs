@@ -9,6 +9,7 @@
  *   node indexer.cjs            (continuous scan from last known block)
  *   node indexer.cjs --from N   (start from block N)
  *   node indexer.cjs --once     (single scan, then exit)
+ *   node indexer.cjs --mempool  (scan mempool only, then exit)
  */
 
 const fs = require('fs')
@@ -17,8 +18,10 @@ const crypto = require('crypto')
 
 const WoC_API = 'https://api.whatsonchain.com/v1/bsv/main'
 const LEDGER_PATH = path.join(__dirname, 'ledger.json')
+const MEMPOOL_PATH = path.join(__dirname, 'mempool.json')
 const PROTOCOL_PREFIX = 'CARDIMG'
 const SCAN_DELAY = 10000 // 10 seconds between scans
+const MEMPOOL_SCAN_DELAY = 30000 // 30 seconds for mempool rescans
 
 // Initialize ledger
 function loadLedger() {
@@ -37,6 +40,18 @@ function saveLedger(ledger) {
   fs.writeFileSync(LEDGER_PATH, JSON.stringify(ledger, null, 2))
 }
 
+// Mempool cache (zero-conf cards)
+function loadMempool() {
+  if (fs.existsSync(MEMPOOL_PATH)) {
+    return JSON.parse(fs.readFileSync(MEMPOOL_PATH, 'utf8'))
+  }
+  return { cards: {}, lastScan: 0 }
+}
+
+function saveMempool(mempool) {
+  fs.writeFileSync(MEMPOOL_PATH, JSON.stringify(mempool, null, 2))
+}
+
 // Get current chain height
 async function getHeight() {
   const res = await fetch(`${WoC_API}/block/headers?limit=1`)
@@ -45,12 +60,23 @@ async function getHeight() {
   return data[0].height
 }
 
-// Get block transactions
+// Get block transactions (using correct WoC API)
 async function getBlockTxs(height) {
-  const res = await fetch(`${WoC_API}/block/${height}/txs`)
+  const res = await fetch(`${WoC_API}/block/height/${height}`)
   if (!res.ok) throw new Error(`WoC block error: ${res.status}`)
   const data = await res.json()
-  return data
+  // Returns { tx: [...], ... } - extract txids
+  return (data.tx || []).map(txid => ({ txid }))
+}
+
+// Get mempool transactions for an address
+async function getMempoolTxs(address) {
+  const res = await fetch(`${WoC_API}/address/${address}/unspent`)
+  if (!res.ok) return []
+  const data = await res.json()
+  // This gives UTXOs, but we need to scan differently
+  // Instead, we'll scan recent broadcast txs or use a different approach
+  return []
 }
 
 // Get raw transaction hex
@@ -58,6 +84,13 @@ async function getTxHex(txid) {
   const res = await fetch(`${WoC_API}/tx/${txid}/hex`)
   if (!res.ok) throw new Error(`WoC tx error: ${res.status}`)
   return res.text()
+}
+
+// Get tx status (to check if confirmed)
+async function getTxStatus(txid) {
+  const res = await fetch(`${WoC_API}/tx/${txid}`)
+  if (!res.ok) return null
+  return res.json()
 }
 
 // Parse OP_RETURN from raw tx hex
@@ -157,22 +190,117 @@ async function scanBlock(height, ledger) {
   return found
 }
 
+// Scan pending mempool transactions (zero-conf uploads)
+// These are tracked in a pending.json file when uploaded
+async function scanMempool(ledger, mempool) {
+  const pendingPath = path.join(__dirname, 'pending.json')
+  if (!fs.existsSync(pendingPath)) {
+    return { found: 0, confirmed: 0 }
+  }
+  
+  const pending = JSON.parse(fs.readFileSync(pendingPath, 'utf8'))
+  let found = 0
+  let confirmed = 0
+  const stillPending = []
+  
+  for (const entry of pending) {
+    try {
+      const status = await getTxStatus(entry.txid)
+      
+      if (status && status.blockheight) {
+        // Confirmed! Move to ledger
+        console.log(`  Confirmed: ${entry.txid} in block ${status.blockheight}`)
+        
+        // Get the image data from cache or re-fetch
+        const imgPath = path.join(__dirname, 'images', `${entry.hash}.bin`)
+        let imageBuf
+        if (fs.existsSync(imgPath)) {
+          imageBuf = fs.readFileSync(imgPath)
+        } else {
+          const txHex = await getTxHex(entry.txid)
+          const card = parseCardImg(txHex)
+          if (card) {
+            imageBuf = card.image
+            fs.mkdirSync(path.dirname(imgPath), { recursive: true })
+            fs.writeFileSync(imgPath, imageBuf)
+          }
+        }
+        
+        ledger.cards[entry.hash] = {
+          txid: entry.txid,
+          blockHeight: status.blockheight,
+          size: entry.size
+        }
+        ledger.totalImages++
+        ledger.totalBytes += entry.size
+        
+        // Remove from mempool cache
+        delete mempool.cards[entry.hash]
+        confirmed++
+      } else {
+        // Still in mempool
+        if (!ledger.cards[entry.hash]) {
+          // Add to mempool cache if not already in ledger
+          mempool.cards[entry.hash] = {
+            txid: entry.txid,
+            size: entry.size,
+            blockHeight: null // zero-conf
+          }
+          found++
+        }
+        stillPending.push(entry)
+      }
+    } catch (e) {
+      console.log(`  Error checking ${entry.txid}: ${e.message}`)
+      stillPending.push(entry) // Keep for retry
+    }
+    
+    // Small delay to avoid rate limiting
+    await new Promise(r => setTimeout(r, 100))
+  }
+  
+  // Update pending list (remove confirmed)
+  fs.writeFileSync(pendingPath, JSON.stringify(stillPending, null, 2))
+  
+  mempool.lastScan = Date.now()
+  saveMempool(mempool)
+  
+  return { found, confirmed }
+}
+
 // Main scan loop
 async function main() {
   const args = process.argv.slice(2)
   const fromBlock = parseInt(args.find(a => a.startsWith('--from'))?.split('=')[1] || args[args.indexOf('--from') + 1]) || null
   const once = args.includes('--once')
+  const mempoolOnly = args.includes('--mempool')
   
   const ledger = loadLedger()
+  const mempool = loadMempool()
   let startBlock = fromBlock || ledger.lastBlock + 1
   
   console.log('CARDIMG Indexer')
   console.log('Ledger:', LEDGER_PATH)
+  console.log('Mempool cache:', MEMPOOL_PATH)
+  
+  // Mempool-only mode
+  if (mempoolOnly) {
+    console.log('Scanning mempool for pending transactions...')
+    const { found, confirmed } = await scanMempool(ledger, mempool)
+    saveLedger(ledger)
+    console.log(`\nDone. ${found} in mempool, ${confirmed} newly confirmed.`)
+    return
+  }
+  
   console.log('Starting from block:', startBlock)
   
   if (startBlock === 1) {
     console.log('Tip: Use --from N to start from a specific block (skip genesis scan)')
   }
+  
+  // First, scan mempool for any pending transactions
+  console.log('Checking mempool...')
+  await scanMempool(ledger, mempool)
   
   while (true) {
     const tip = await getHeight()
@@ -196,9 +324,14 @@ async function main() {
     await new Promise(r => setTimeout(r, 1000)) // Small delay between blocks
   }
   
+  // Final mempool check
+  await scanMempool(ledger, mempool)
+  saveLedger(ledger)
+  
   console.log('\nDone.')
-  console.log('Total images:', ledger.totalImages)
+  console.log('Total confirmed:', ledger.totalImages)
   console.log('Total bytes:', ledger.totalBytes)
+  console.log('In mempool:', Object.keys(mempool.cards).length)
 }
 
 main().catch(e => {

@@ -1,0 +1,7 @@
+node_modules/
+ledger.json
+images/
+*.png
+*.jpg
+*.jpeg
+*.bin

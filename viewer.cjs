@@ -11,10 +11,11 @@
 
 const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
 const express = require('express')
 
 const app = express()
-const PORT = 3013
+const PORT = 3014
 const LEDGER_PATH = path.join(__dirname, 'ledger.json')
 const MEMPOOL_PATH = path.join(__dirname, 'mempool.json')
 const PENDING_PATH = path.join(__dirname, 'pending.json')
@@ -25,7 +26,6 @@ const WALLET_PATH = path.join(process.env.HOME || '/root', '.openclaw', 'bsv-wal
 const WoC_API = 'https://api.whatsonchain.com/v1/bsv/main'
 
 const bsv = require('bsv')
-const crypto = require('crypto')
 
 // Multer for file uploads
 const multer = require('multer')
@@ -211,6 +211,180 @@ app.post('/upload', upload.single('image'), async (req, res) => {
   }
 })
 
+// ─── Universal Image API ───
+//
+// Simple, app-facing endpoints. These are the primary interface
+// for any application that needs to fetch on-chain card images.
+//
+// URL patterns (so simple you can paste them in a browser):
+//
+//   GET /img/<sha256>        → raw image bytes, proper content-type
+//   GET /tx/<txid>           → raw image bytes (looked up by txid)
+//   GET /card/<sha256>       → JSON metadata
+//   GET /list                → JSON array of all cards
+//
+// If image is not in local cache, falls back to fetching from chain
+// via WhatsOnChain OP_RETURN endpoint.
+//
+// Direct chain fallback (no server needed):
+//   1. GET https://api.whatsonchain.com/v1/bsv/main/tx/<txid>/opreturn
+//   2. Parse hex: skip OP_FALSE(00) OP_RETURN(6a), parse pushdata,
+//      skip "CARDIMG" prefix (7 bytes), rest is image data
+//   3. Write bytes to file
+
+function detectMime(buf) {
+  if (buf[0] === 0xFF && buf[1] === 0xD8) return { mime: 'image/jpeg', ext: '.jpg' }
+  if (buf[0] === 0x89 && buf[1] === 0x50) return { mime: 'image/png', ext: '.png' }
+  if (buf[0] === 0x52 && buf.slice(8, 12).toString('ascii') === 'WEBP') return { mime: 'image/webp', ext: '.webp' }
+  if (buf[0] === 0x47 && buf[1] === 0x49) return { mime: 'image/gif', ext: '.gif' }
+  return { mime: 'application/octet-stream', ext: '.bin' }
+}
+
+function parsePushData(buf, offset) {
+  const b = buf[offset]
+  if (b <= 0x4b) return { data: buf.slice(offset + 1, offset + 1 + b), next: offset + 1 + b }
+  if (b === 0x4c) { const l = buf[offset + 1]; return { data: buf.slice(offset + 2, offset + 2 + l), next: offset + 2 + l } }
+  if (b === 0x4d) { const l = buf.readUInt16LE(offset + 1); return { data: buf.slice(offset + 3, offset + 3 + l), next: offset + 3 + l } }
+  if (b === 0x4e) { const l = buf.readUInt32LE(offset + 1); return { data: buf.slice(offset + 5, offset + 5 + l), next: offset + 5 + l } }
+  return null
+}
+
+async function fetchImageFromChain(txid) {
+  // Fetch OP_RETURN data from WoC
+  const res = await fetch(`${WoC_API}/tx/${txid}/opreturn`)
+  if (!res.ok) return null
+  const outputs = await res.json()
+  if (!outputs || outputs.length === 0) return null
+  
+  for (const out of outputs) {
+    const buf = Buffer.from(out.hex, 'hex')
+    let pos = 0
+    if (buf[pos] !== 0x00) continue
+    pos++
+    if (buf[pos] !== 0x6a) continue
+    pos++
+    
+    const prefixPush = parsePushData(buf, pos)
+    if (!prefixPush) continue
+    if (prefixPush.data.toString('ascii') !== 'CARDIMG') continue
+    
+    const imagePush = parsePushData(buf, prefixPush.next)
+    if (!imagePush) continue
+    
+    return imagePush.data
+  }
+  return null
+}
+
+async function getOrCreateImage(hash) {
+  // 1. Check local cache
+  const imgPath = path.join(IMAGES_DIR, `${hash}.bin`)
+  if (fs.existsSync(imgPath)) {
+    return fs.readFileSync(imgPath)
+  }
+  
+  // 2. Look up txid from ledger/mempool and fetch from chain
+  const ledger = loadLedger()
+  const mempool = loadMempool()
+  const card = ledger.cards[hash] || mempool.cards[hash]
+  if (!card) return null
+  
+  const imageBuf = await fetchImageFromChain(card.txid)
+  if (!imageBuf) return null
+  
+  // Cache for next time
+  fs.mkdirSync(IMAGES_DIR, { recursive: true })
+  fs.writeFileSync(imgPath, imageBuf)
+  
+  return imageBuf
+}
+
+async function getTxidHash(txid) {
+  // Reverse lookup: find hash from txid
+  const ledger = loadLedger()
+  const mempool = loadMempool()
+  for (const [hash, card] of Object.entries({ ...mempool.cards, ...ledger.cards })) {
+    if (card.txid === txid) return hash
+  }
+  return null
+}
+
+// GET /img/<hash> → raw image bytes
+app.get('/img/:hash', async (req, res) => {
+  try {
+    const buf = await getOrCreateImage(req.params.hash)
+    if (!buf) return res.status(404).json({ error: 'Image not found' })
+    const { mime, ext } = detectMime(buf)
+    res.setHeader('Content-Type', mime)
+    res.setHeader('Cache-Control', 'public, max-age=31536000')
+    res.send(buf)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// GET /tx/<txid> → raw image bytes (lookup by txid)
+app.get('/tx/:txid', async (req, res) => {
+  try {
+    const txid = req.params.txid
+    let hash = await getTxidHash(txid)
+    
+    let buf
+    if (hash) {
+      buf = await getOrCreateImage(hash)
+    } else {
+      // Unknown txid — try fetching directly from chain
+      buf = await fetchImageFromChain(txid)
+      if (buf) {
+        hash = crypto.createHash('sha256').update(buf).digest('hex')
+        // Cache it
+        fs.mkdirSync(IMAGES_DIR, { recursive: true })
+        fs.writeFileSync(path.join(IMAGES_DIR, `${hash}.bin`), buf)
+      }
+    }
+    
+    if (!buf) return res.status(404).json({ error: 'No CARDIMG output found for this txid' })
+    const { mime } = detectMime(buf)
+    res.setHeader('Content-Type', mime)
+    res.setHeader('Cache-Control', 'public, max-age=31536000')
+    res.send(buf)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// GET /card/<hash> → JSON metadata (short alias)
+app.get('/card/:hash', (req, res) => {
+  const ledger = loadLedger()
+  const mempool = loadMempool()
+  const card = ledger.cards[req.params.hash] || mempool.cards[req.params.hash]
+  if (!card) return res.status(404).json({ error: 'Not found' })
+  res.json({
+    hash: req.params.hash,
+    ...card,
+    woCLink: `https://whatsonchain.com/tx/${card.txid}`,
+    imageUrl: `/img/${req.params.hash}`,
+    txUrl: `/tx/${card.txid}`
+  })
+})
+
+// GET /list → JSON array (simpler than /cards object format)
+app.get('/list', (req, res) => {
+  const ledger = loadLedger()
+  const mempool = loadMempool()
+  const allCards = { ...mempool.cards, ...ledger.cards }
+  const list = Object.entries(allCards).map(([hash, meta]) => ({
+    hash,
+    ...meta,
+    imageUrl: `/img/${hash}`,
+    txUrl: `/tx/${meta.txid}`,
+    woCLink: `https://whatsonchain.com/tx/${meta.txid}`
+  }))
+  res.json(list)
+})
+
+// ─── End Universal Image API ───
+
 // HTML viewer
 app.get('/', (req, res) => {
   const ledger = loadLedger()
@@ -335,9 +509,17 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
   console.log('CARDIMG Viewer running at http://localhost:' + PORT)
-  console.log('API endpoints:')
-  console.log('  GET /cards          - list all cards')
-  console.log('  GET /cards/:hash    - card metadata')
-  console.log('  GET /cards/:hash/image - raw image')
-  console.log('  GET /stats          - index stats')
+  console.log('')
+  console.log('Universal Image API:')
+  console.log('  GET /img/<hash>   → raw image bytes (paste in browser)')
+  console.log('  GET /tx/<txid>    → raw image bytes by txid')
+  console.log('  GET /card/<hash>  → JSON metadata')
+  console.log('  GET /list         → JSON array of all cards')
+  console.log('')
+  console.log('Indexer API:')
+  console.log('  GET /cards        → all cards (object)')
+  console.log('  GET /cards/:hash  → card metadata')
+  console.log('  GET /cards/:hash/image → raw image')
+  console.log('  GET /stats        → index stats')
+  console.log('  POST /upload      → upload new image')
 })

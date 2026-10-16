@@ -1,171 +1,6 @@
-# CARDIMG API
+# CARDIMG
 
-Universal image API for on-chain BSV card scans. Serves cached images from the CARDIMG indexer with chain fallback for any txid.
-
-## Quick Start
-
-```bash
-node viewer.cjs
-# → http://localhost:3014
-```
-
-Also public at `https://cardimg.axiemaid.com` (Cloudflare tunnel).
-
-## API Endpoints
-
-### Universal Image API (for apps)
-
-These are the primary endpoints. Any app, any language, any framework.
-
-| Endpoint | Method | Returns | Content-Type |
-|----------|--------|---------|--------------|
-| `/img/<sha256>` | GET | Raw image bytes | image/jpeg, image/png, etc. |
-| `/tx/<txid>` | GET | Raw image bytes by txid | image/jpeg, image/png, etc. |
-| `/card/<sha256>` | GET | JSON metadata + links | application/json |
-| `/list` | GET | JSON array of all cards | application/json |
-
-#### `GET /img/<hash>`
-
-Returns raw image bytes with proper content-type header. Cached locally — first hit serves from disk, near-instant.
-
-If the image isn't in local cache, the server fetches it from chain via WoC OP_RETURN endpoint and caches it for future requests.
-
-```bash
-curl http://localhost:3014/img/043774e943a057d2... > card.jpg
-```
-
-```javascript
-const res = await fetch('http://localhost:3014/img/' + hash)
-const blob = await res.blob()
-```
-
-```python
-import requests
-img = requests.get(f'http://localhost:3014/img/{hash}').content
-```
-
-```html
-<img src="http://localhost:3014/img/043774e943a057d2...">
-```
-
-#### `GET /tx/<txid>>
-
-Same as `/img/<hash>` but looked up by transaction ID. Works for **any** CARDIMG tx on the BSV blockchain, even if our indexer hasn't seen it yet — fetches directly from chain and caches.
-
-```bash
-curl http://localhost:3014/tx/a7322980a27f57e6... > card.jpg
-```
-
-#### `GET /card/<hash>`
-
-JSON metadata for a single card:
-
-```json
-{
-  "hash": "043774e943a057d2...",
-  "txid": "a7322980a27f57e6...",
-  "blockHeight": 969407,
-  "size": 998183,
-  "woCLink": "https://whatsonchain.com/tx/a7322980a27f57e6...",
-  "imageUrl": "/img/043774e943a057d2...",
-  "txUrl": "/tx/a7322980a27f57e6..."
-}
-```
-
-#### `GET /list`
-
-JSON array of all indexed cards with URLs:
-
-```json
-[
-  {
-    "hash": "043774e9...",
-    "txid": "a7322980...",
-    "blockHeight": 969407,
-    "size": 998183,
-    "imageUrl": "/img/043774e9...",
-    "txUrl": "/tx/a7322980...",
-    "woCLink": "https://whatsonchain.com/tx/a7322980..."
-  }
-]
-```
-
-### Indexer API (internal)
-
-| Endpoint | Method | Returns |
-|----------|--------|---------|
-| `/cards` | GET | All cards as object map `{ hash: { txid, blockHeight, size } }` |
-| `/cards/:hash` | GET | Card metadata (same as /card/:hash but without URLs) |
-| `/cards/:hash/image` | GET | Raw image (alias for /img/:hash) |
-| `/stats` | GET | `{ confirmed, mempool, totalImages, totalBytes, lastBlock }` |
-| `/upload` | POST | Upload new image (multipart form, field name: "image") |
-
-### Web Dashboard
-
-`GET /` returns an HTML page showing all indexed images in a grid with upload form.
-
-## Response Headers
-
-- `Content-Type`: auto-detected from image magic bytes (JPEG, PNG, WebP, GIF)
-- `Cache-Control: public, max-age=31536000` — images are immutable (same hash = same bytes)
-
-## Chain Fallback (no server needed)
-
-If this server is down, any app can fetch directly from WhatsOnChain:
-
-```bash
-# 1. Get OP_RETURN outputs
-curl https://api.whatsonchain.com/v1/bsv/main/tx/<txid>/opreturn
-
-# 2. Parse hex:
-#    - Skip OP_FALSE (0x00) OP_RETURN (0x6a)
-#    - Parse pushdata for "CARDIMG" prefix (7 bytes)
-#    - Parse next pushdata for image bytes
-#    - Write to file
-```
-
-Python example:
-```python
-import requests
-
-def fetch_cardimg(txid):
-    res = requests.get(f'https://api.whatsonchain.com/v1/bsv/main/tx/{txid}/opreturn')
-    outputs = res.json()
-    for out in outputs:
-        buf = bytes.fromhex(out['hex'])
-        # Skip OP_FALSE(00) OP_RETURN(6a)
-        # Parse pushdata for "CARDIMG"
-        # Parse next pushdata for image
-        # ... (see viewer.cjs parsePushData for reference)
-    return None
-```
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `viewer.cjs` | Express server — serves API + web dashboard |
-| `indexer.cjs` | JungleBus indexer — scans chain, caches images, updates ledger |
-| `upload.cjs` | Single-image CLI uploader |
-| `batch-upload.cjs` | Batch uploader (multiple images, one UTXO each) |
-| `split-utxos.cjs` | Pre-split wallet UTXOs for independent uploads |
-| `ledger.json` | Confirmed on-chain images |
-| `mempool.json` | Zero-conf (unconfirmed) images |
-| `pending.json` | Pending uploads awaiting confirmation |
-| `upload-log.json` | Human-readable upload log (synced to card-scans/) |
-| `images/` | Local image cache (`<sha256>.bin` files) |
-
-## Wallet
-
-Uses BSV wallet at `~/.openclaw/bsv-wallet.json`.
-Address: `15tMS13ewnZY7xti1xmxmhD6cRLnxMxVWQ`
-
-## Related
-
-- **Card scans folder:** `~/.openclaw/card-scans/` (source images + upload log + main README)
-- **UTXO pool manager:** `~/.openclaw/utxo-pool-manager/` (pre-split utility)
-- **Card centering tools:** `~/.openclaw/card-centering/` (standalone Python analysis — uses this API to fetch images)
-- **Pipeline (optional):** `~/.openclaw/cardimg-pipeline/` (auto-analysis bridge, not needed for basic image fetch)
+On-chain card image registry for the BSV blockchain. Permissionless, immutable, minimal.
 
 ## Protocol
 
@@ -173,7 +8,151 @@ Address: `15tMS13ewnZY7xti1xmxmhD6cRLnxMxVWQ`
 OP_FALSE OP_RETURN "CARDIMG" <image_bytes>
 ```
 
-- Permissionless, immutable, minimal
-- Identity = SHA256 of image data
-- All meaning (card ID, set, condition) is application layer
-- See `~/.openclaw/card-scans/README.md` for full protocol docs
+- **No version byte, no chunking** — BSV accepts large OP_RETURN outputs (tested 6MB+)
+- **Identity = SHA256 of image data** — exact byte match
+- **All meaning is application layer** — card ID, condition, price, ownership are not in the protocol
+
+### CARDSET (companion protocol)
+
+```
+OP_FALSE OP_RETURN "CARDSET" <cardimg_txid_1> <cardimg_txid_2> ...
+```
+
+- Links CARDIMG txids into sets (front + back + supplementary angles)
+- Positional ordering: pos 0 = front, pos 1 = back, pos 2+ = supplementary
+- Convention, not enforcement — apps prefer correctly ordered sets
+- Permissionless — anyone can create associations
+
+## Architecture
+
+```
+┌──────────────┐   JungleBus   ┌──────────────┐   WoC    ┌─────────────┐
+│  Indexer     │ ◄───────────  │  BSV Chain   │ ───────► │  WhatsOn    │
+│  (scanner)   │               │              │          │  Chain API  │
+└──────┬───────┘               └──────────────┘          └─────────────┘
+       │ writes
+       ▼
+┌──────────────┐    HTTP API   ┌──────────────┐   HTTP   ┌──────────────┐
+│  Indexer     │ ◄──────────── │  CARDIMG API │ ◄──────► │  Viewer      │
+│  Data Dir    │               │  (port 3014) │          │  (port 3015) │
+│              │               │              │          │  (public)    │
+│  ledger.json │               │  /list       │          │              │
+│  mempool.json│               │  /img/:hash  │          │  Uploads tab │
+│  cardset-*   │               │  /tx/:txid   │          │  Cards tab   │
+│  images/     │               │  /sets/list  │          │              │
+│  exclusions  │               │  /exclusions │          │              │
+└──────────────┘               └──────────────┘          └──────────────┘
+```
+
+## Local Folders
+
+| Folder | Purpose |
+|--------|---------|
+| `~/.openclaw/cardimg/` | **Main data dir** — indexer, viewer, API, exclusions, ledgers |
+| `~/.openclaw/cardimg-upload/` | Composable upload library (CLI + JS API) |
+| `~/.openclaw/cardimg-indexer/` | Composable JungleBus indexer library |
+| `~/.openclaw/cardimg-api/` | Composable Express API server |
+| `~/.openclaw/cardimg-scan/` | Application-layer scan validation (DPI, edges, background) |
+| `~/.openclaw/cardimg-viewer/` | Public-facing gallery viewer |
+| `~/.openclaw/cardimg-ecosystem/` | Design docs for grading, marketplace, reputation layers |
+
+## Key Files (main data dir)
+
+| File | Purpose |
+|------|---------|
+| `indexer.cjs` | JungleBus indexer — scans chain, caches images, updates ledger |
+| `viewer.cjs` | Legacy viewer (use cardimg-viewer instead) |
+| `cardset-indexer.cjs` | CARDSET JungleBus indexer — catches all CARDSETs from anyone |
+| `cardset-viewer.cjs` | Legacy CARDSET viewer (use cardimg-viewer instead) |
+| `upload.cjs` | Single-image CLI uploader |
+| `batch-upload.cjs` | Batch uploader (multiple images, one UTXO each) |
+| `split-utxos.cjs` | Pre-split wallet UTXOs for independent uploads |
+| `ledger.json` | Confirmed CARDIMG images (txid-keyed) |
+| `mempool.json` | Zero-conf CARDIMG images (txid-keyed) |
+| `cardset-ledger.json` | Confirmed CARDSETs |
+| `cardset-mempool.json` | Zero-conf CARDSETs |
+| `exclusions.json` | Txids hidden from API responses (cardimg + cardset arrays) |
+| `images/` | Local image cache (`<sha256>.bin` files) |
+| `thumbs/` | Thumbnail cache (`<hash>_400.jpg` files) |
+
+## Exclusions
+
+Exclusions hide specific transactions from the API and viewer. Still on-chain, just not shown.
+
+### File: `exclusions.json`
+
+```json
+{
+  "cardimg": [
+    "3a512c182e03f4d5cf1468e679740f7ca5c6bdcfb9953fcda95704997aacb3f6"
+  ],
+  "cardset": []
+}
+```
+
+- Edit the file directly — API reads it on every request, changes take effect immediately
+- Or use the API endpoints:
+
+```bash
+# Add
+curl -X POST http://localhost:3014/exclusions \
+  -H "Content-Type: application/json" \
+  -d '{"type": "cardimg", "txid": "3a512c..."}'
+
+# Remove
+curl -X DELETE http://localhost:3014/exclusions \
+  -H "Content-Type: application/json" \
+  -d '{"type": "cardimg", "txid": "3a512c..."}'
+
+# List
+curl http://localhost:3014/exclusions
+```
+
+## Card Code Mapping (application layer)
+
+Card codes (C01–C34, S01–S08) are not stored on-chain. They're a viewer-level mapping.
+
+### File: `~/.openclaw/cardimg-viewer/public/card-codes.json`
+
+```json
+{
+  "mappings": {
+    "42484af615d840eb4252d88b955268553403c264d19b9c9e44dff8f7da3ae7b5": "C01",
+    "6c0bdcf5fdb0d521e83c16d3c137b35de17a211bcd749e8133de02450e601984": "S03"
+  }
+}
+```
+
+- **Key** = CARDSET txid
+- **Value** = card code
+- Viewer reads on page load — changes take effect on refresh
+- Future: pHash auto-matching to eliminate manual mapping
+
+## Wallet
+
+Uses BSV wallet at `~/.openclaw/bsv-wallet.json`.
+Address: `15tMS13ewnZY7xti1xmxmhD6cRLnxMxVWQ`
+
+## Related Repos
+
+- [cardimg-upload](https://github.com/axiemaid/cardimg-upload) — composable upload library
+- [cardimg-indexer](https://github.com/axiemaid/cardimg-indexer) — composable indexer library
+- [cardimg-api](https://github.com/axiemaid/cardimg-api) — composable API server
+- [cardimg-scan](https://github.com/axiemaid/cardimg-scan) — scan validation
+- [cardimg-viewer](https://github.com/axiemaid/cardimg-viewer) — public gallery viewer
+
+## JungleBus Subscriptions
+
+- **CARDIMG:** indexer scans minting address (legacy)
+- **CARDSET:** `94572334d5674b3da841c058b4b462c5d83c83350f92918aa175c80b804a50ac` (catches all CARDSETs from anyone)
+
+## Cost
+
+- 0.1 sats/byte (100 sat/KB), calculated from actual serialized tx size
+- Both CARDIMG and CARDSET use the same fee calculation
+
+## First Upload
+
+- TXID: `3a512c182e03f4d5cf1468e679740f7ca5c6bdcfb9953fcda95704997aacb3f6`
+- Block: 957054
+- Size: 560KB

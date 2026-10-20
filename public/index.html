@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CARDIMG Explorer</title>
+  <meta name="description" content="On-chain card image registry — browse images inscribed on the BSV blockchain">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand" id="brand-link">
+      <span class="logo">🃏</span>
+      <span class="title">CARDIMG Explorer</span>
+    </div>
+    <div class="tab-toggle" id="tab-toggle">
+      <button class="tab-btn active" data-tab="cards">Cards</button>
+      <button class="tab-btn" data-tab="uploads">Uploads</button>
+    </div>
+  </header>
+
+  <div id="app">
+    <!-- Gallery views (uploads + cards tabs) -->
+    <div id="gallery-view">
+      <!-- Uploads Tab -->
+      <main id="gallery" class="view active">
+        <div class="page-header">
+          <h1>Newest Uploads</h1>
+          <span class="page-stats" id="stats-bar"><span id="stat-count">—</span> uploads</span>
+        </div>
+        <div id="loading" class="loading">
+          <div class="spinner"></div>
+          <p>Loading uploads from chain…</p>
+        </div>
+        <div id="grid" class="grid" style="display:none"></div>
+        <div id="empty" class="empty" style="display:none">
+          <p>No uploads indexed yet.</p>
+        </div>
+      </main>
+
+      <!-- Cards Tab -->
+      <main id="sets-view" class="view" style="display:none">
+        <!-- Card Code Index -->
+        <section id="card-code-index" class="card-code-section">
+          <div class="page-header">
+            <h1>Card Directory</h1>
+            <span class="page-stats" id="card-code-stats"></span>
+          </div>
+          <div id="card-code-grid" class="card-code-grid"></div>
+        </section>
+
+        <!-- Newest Cardsets Feed -->
+        <section id="cardsets-feed" class="cardsets-feed-section">
+          <div class="page-header">
+            <div class="feed-title-row">
+            <h1 id="cardsets-feed-title">Newest Cardsets</h1>
+            <div class="feed-title-right">
+              <span class="page-stats" id="sets-stats"></span>
+              <button id="clear-filter-btn" style="display:none">Clear filter</button>
+            </div>
+          </div>
+          </div>
+          <div id="sets-loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading cards from chain…</p>
+          </div>
+          <div id="sets-grid" class="sets-grid" style="display:none"></div>
+          <div id="sets-empty" class="empty" style="display:none">
+            <p>No cards indexed yet.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Upload Detail Page (/cardimg/:txid) -->
+    <div id="upload-page" style="display:none">
+      <div class="page-header">
+        <a href="/" class="back-link">← Back</a>
+        <h1>Upload</h1>
+      </div>
+      <div class="detail-layout">
+        <div class="detail-image-wrap">
+          <img id="upload-image" src="" alt="Card image">
+        </div>
+        <div class="detail-meta" id="upload-meta"></div>
+      </div>
+    </div>
+
+    <!-- Card Detail Page (/card/:txid) -->
+    <div id="card-page" style="display:none">
+      <div class="page-header">
+        <a href="/" class="back-link">← Back</a>
+        <h1>Card</h1>
+      </div>
+      <div class="detail-layout">
+        <div class="detail-image-wrap">
+          <div class="card-primary-wrap">
+            <img id="card-primary-image" src="" alt="Card image" style="cursor:zoom-in">
+            <div id="card-zoom-hint" class="card-gallery-zoom-hint">🔍</div>
+          </div>
+          <div id="card-thumb-strip" class="card-thumb-strip"></div>
+        </div>
+        <div class="detail-meta" id="card-detail-meta"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://whatsonchain.com" target="_blank" rel="noopener">Powered by WhatsOnChain</a>
+    <span class="sep">·</span>
+    <span>CARDIMG Protocol</span>
+  </footer>
+
+  <div id="lightbox" style="display:none">
+    <button id="lightbox-close">&times;</button>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

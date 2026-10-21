@@ -46,6 +46,7 @@ const CARDSET_LEDGER = path.join(DATA_DIR, 'cardset-ledger.json')
 const CARDSET_MEMPOOL = path.join(DATA_DIR, 'cardset-mempool.json')
 const IMAGES_DIR = path.join(DATA_DIR, 'images')
 const LOG_PATH = path.join(DATA_DIR, 'upload-log.json')
+const UPLOAD_QUEUE = path.join(DATA_DIR, 'upload-queue.json')
 const CARD_SCANS_DIR = '/Users/axiemaid/.openclaw/card-scans'
 
 const CARDIMG_SUB = process.env.CARDIMG_SUB || 'f25086265e0adc867a6a45f51a8f1be63bf79fc19355513543d1c704c461889a'
@@ -473,6 +474,92 @@ async function repairCardsetGaps(setLedger, setMempool) {
   }
 }
 
+// --- Process upload queue (scanner-notified txids) ---
+// The scanner writes txids to upload-queue.json after each upload.
+// This processes them regardless of JungleBus connection state.
+async function processUploadQueue(imgLedger, imgMempool, setLedger, setMempool) {
+  if (!fs.existsSync(UPLOAD_QUEUE)) return
+  let queue
+  try {
+    queue = JSON.parse(fs.readFileSync(UPLOAD_QUEUE, 'utf8'))
+    if (!Array.isArray(queue) || queue.length === 0) return
+  } catch { return }
+
+  const remaining = []
+  let found = 0
+
+  for (const txid of queue) {
+    // Skip if already indexed anywhere
+    if (imgLedger.cards[txid]) continue
+    if (imgMempool.cards[txid]) continue
+    if (setLedger.sets.some(s => s.cardsetTxid === txid)) continue
+    if (setMempool.sets.some(s => s.cardsetTxid === txid)) continue
+
+    try {
+      const opReturns = await getOpReturn(txid)
+      if (!opReturns || opReturns.length === 0) {
+        // Might still be in mempool — keep in queue
+        remaining.push(txid)
+        continue
+      }
+
+      const parsed = parseOpReturn(opReturns)
+      if (!parsed) {
+        remaining.push(txid)
+        continue
+      }
+
+      if (parsed.protocol === 'CARDIMG') {
+        // Check if confirmed
+        const info = await getTxInfo(txid)
+        const blockHeight = info?.blockheight ?? null
+        const indexed = await indexCardimg(txid, blockHeight, imgLedger, imgMempool)
+        if (indexed) {
+          if (blockHeight) {
+            imgLedger.lastBlock = Math.max(imgLedger.lastBlock || 0, blockHeight)
+          }
+          imgLedger.totalImages = Object.keys(imgLedger.cards).length
+          imgLedger.totalBytes = Object.values(imgLedger.cards).reduce((s, c) => s + (c.size || 0), 0)
+          saveJSON(CARDIMG_LEDGER, imgLedger)
+          saveJSON(CARDIMG_MEMPOOL, imgMempool)
+          console.log(`  📸 [queue] ${txid.substring(0, 16)}... | ${(parsed.size / 1024).toFixed(0)}KB | ${blockHeight ? 'block ' + blockHeight : 'mempool'}`)
+          found++
+        } else {
+          remaining.push(txid)
+        }
+      } else if (parsed.protocol === 'CARDSET') {
+        const info = await getTxInfo(txid)
+        const blockHeight = info?.blockheight ?? null
+        const indexed = await indexCardset(txid, blockHeight, setLedger, setMempool)
+        if (indexed) {
+          if (blockHeight) {
+            setLedger.lastBlock = Math.max(setLedger.lastBlock || 0, blockHeight)
+            setLedger.totalSets = setLedger.sets.length
+            saveJSON(CARDSET_LEDGER, setLedger)
+          }
+          saveJSON(CARDSET_MEMPOOL, setMempool)
+          console.log(`  🃏 [queue] ${txid.substring(0, 16)}... | ${parsed.txids.length} txids | ${blockHeight ? 'block ' + blockHeight : 'mempool'}`)
+          found++
+        } else {
+          remaining.push(txid)
+        }
+      } else {
+        // Not a CARDIMG or CARDSET — remove from queue
+      }
+    } catch (e) {
+      // WoC might not have it yet — keep in queue
+      remaining.push(txid)
+    }
+  }
+
+  // Rewrite queue with remaining (unprocessed) txids
+  fs.writeFileSync(UPLOAD_QUEUE, JSON.stringify(remaining, null, 2))
+
+  if (found > 0) {
+    console.log(`[queue] Processed ${found} txid(s) from upload queue, ${remaining.length} remaining`)
+  }
+}
+
 // --- Main ---
 
 async function main() {
@@ -657,6 +744,7 @@ async function main() {
   }
 
   // Run gap repair on startup, then every 5 minutes
+  await processUploadQueue(imgLedger, imgMempool, setLedger, setMempool)
   await repairGaps()
   await repairCardsetGaps(setLedger, setMempool)
   await repairCardsetBlocks()
@@ -674,8 +762,14 @@ async function main() {
     }
   }, 60000)
 
+  // Upload queue check every 30s (fast mempool pickup)
+  setInterval(() => {
+    processUploadQueue(imgLedger, imgMempool, setLedger, setMempool).catch(e => console.error('[queue] error:', e.message))
+  }, 30000)
+
   // Gap repair every 5 minutes
   setInterval(() => {
+    processUploadQueue(imgLedger, imgMempool, setLedger, setMempool).catch(e => console.error('[queue] error:', e.message))
     repairGaps().catch(e => console.error('[repair] error:', e.message))
     repairCardsetGaps(setLedger, setMempool).catch(e => console.error('[repair] CARDSET gap error:', e.message))
     repairCardsetBlocks().catch(e => console.error('[repair] CARDSET error:', e.message))

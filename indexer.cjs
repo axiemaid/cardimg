@@ -474,6 +474,78 @@ async function repairCardsetGaps(setLedger, setMempool) {
   }
 }
 
+// --- Repair missed CARDIMGs by scanning WoC blocks ---
+// Same as repairCardsetGaps but for CARDIMG. Scans blocks between
+// imgLedger.lastBlock and chain tip, finds any CARDIMG txs not in the ledger.
+async function repairCardimgGaps(imgLedger, imgMempool) {
+  // Get current chain tip
+  let chainTip
+  try {
+    const res = await fetch(`${WoC_API}/chain/info`)
+    if (!res.ok) return
+    const data = await res.json()
+    chainTip = data.blocks
+  } catch (e) {
+    console.error(`[repair] CARDIMG gap: failed to get chain tip:`, e.message)
+    return
+  }
+
+  const fromBlock = (imgLedger.lastBlock || START_BLOCK) + 1
+  if (fromBlock > chainTip) return // up to date
+
+  const blocksToScan = chainTip - fromBlock + 1
+  if (blocksToScan > 50) {
+    console.log(`[repair] CARDIMG gap: ${blocksToScan} blocks behind (scanning last 50 only)`)
+  }
+  const scanFrom = Math.max(fromBlock, chainTip - 49)
+
+  let found = 0
+  for (let height = scanFrom; height <= chainTip; height++) {
+    let txids
+    try {
+      txids = await getBlockTxids(height)
+    } catch (e) {
+      console.error(`[repair] CARDIMG gap: failed to get block ${height}:`, e.message)
+      continue
+    }
+    if (!txids) continue
+
+    for (const txid of txids) {
+      // Skip if already in ledger or mempool
+      if (imgLedger.cards[txid]) continue
+      if (imgMempool.cards[txid]) continue
+
+      try {
+        const opReturns = await getOpReturn(txid)
+        if (!opReturns || opReturns.length === 0) continue
+        const parsed = parseOpReturn(opReturns)
+        if (!parsed || parsed.protocol !== 'CARDIMG') continue
+
+        const indexed = await indexCardimg(txid, height, imgLedger, imgMempool)
+        if (indexed) {
+          imgLedger.lastBlock = Math.max(imgLedger.lastBlock || 0, height)
+          imgLedger.totalImages = Object.keys(imgLedger.cards).length
+          imgLedger.totalBytes = Object.values(imgLedger.cards).reduce((s, c) => s + (c.size || 0), 0)
+          saveJSON(CARDIMG_LEDGER, imgLedger)
+          saveJSON(CARDIMG_MEMPOOL, imgMempool)
+          console.log(`  📸 [repair] ${txid.substring(0, 16)}... | ${(parsed.size / 1024).toFixed(0)}KB | block ${height}`)
+          found++
+        }
+      } catch (e) {
+        // Not a CARDIMG or WoC error — skip
+      }
+    }
+  }
+
+  // Update lastBlock even if no new CARDIMGs found
+  imgLedger.lastBlock = Math.max(imgLedger.lastBlock || 0, chainTip)
+  saveJSON(CARDIMG_LEDGER, imgLedger)
+
+  if (found > 0) {
+    console.log(`[repair] CARDIMG gap: found ${found} missed CARDIMG(s) in blocks ${scanFrom}-${chainTip}`)
+  }
+}
+
 // --- Process upload queue (scanner-notified txids) ---
 // The scanner writes txids to upload-queue.json after each upload.
 // This processes them regardless of JungleBus connection state.
@@ -747,6 +819,7 @@ async function main() {
   await processUploadQueue(imgLedger, imgMempool, setLedger, setMempool)
   await repairGaps()
   await repairCardsetGaps(setLedger, setMempool)
+  await repairCardimgGaps(imgLedger, imgMempool)
   await repairCardsetBlocks()
   await repairCardimgBlocks()
 
@@ -772,6 +845,7 @@ async function main() {
     processUploadQueue(imgLedger, imgMempool, setLedger, setMempool).catch(e => console.error('[queue] error:', e.message))
     repairGaps().catch(e => console.error('[repair] error:', e.message))
     repairCardsetGaps(setLedger, setMempool).catch(e => console.error('[repair] CARDSET gap error:', e.message))
+    repairCardimgGaps(imgLedger, imgMempool).catch(e => console.error('[repair] CARDIMG gap error:', e.message))
     repairCardsetBlocks().catch(e => console.error('[repair] CARDSET error:', e.message))
     repairCardimgBlocks().catch(e => console.error('[repair] CARDIMG error:', e.message))
   }, 300000)

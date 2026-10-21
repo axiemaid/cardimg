@@ -29,19 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const backLink = e.target.closest('.back-link')
     const viewLink = e.target.closest('.cardset-view-link')
     const codeChip = e.target.closest('.card-code-item')
-    const clearFilter = e.target.closest('#clear-filter-btn')
 
-    if (clearFilter) {
-      e.preventDefault()
-      activeCardFilter = null
-      updateCardsetsFeedTitle()
-      renderSetsGrid()
-      renderCardCodeGrid()
-    } else if (codeChip) {
+    if (codeChip) {
       e.preventDefault()
       const code = codeChip.dataset.code
-      // Toggle off if clicking same
-      if (activeCardFilter === code) {
+      if (code === 'ALL') {
+        activeCardFilter = null
+      } else if (activeCardFilter === code) {
         activeCardFilter = null
       } else {
         activeCardFilter = code
@@ -49,8 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
       updateCardsetsFeedTitle()
       renderCardCodeGrid()
       renderSetsGrid()
-      // Scroll down to feed
-      document.getElementById('cardsets-feed').scrollIntoView({ behavior: 'smooth', block: 'start' })
     } else if (backLink) {
       e.preventDefault()
       window.history.back()
@@ -258,7 +250,7 @@ function createCardElement(card, index) {
     </div>
     <div class="card-info">
       <div class="card-txid" title="${card.txid}">${shortHash(card.txid)}</div>
-      <div class="card-size">${formatBytes(card.size)}</div>
+  
     </div>
   `
 
@@ -402,11 +394,15 @@ function renderCardCodeGrid() {
   const { counts, uncategorized } = buildCodeCounts()
   const totalSets = allSets.length
 
-  // Update stats
-  const statsEl = document.getElementById('card-code-stats')
-  if (statsEl) statsEl.textContent = `${totalSets} cards`
-
   grid.innerHTML = ''
+
+  // "All" option
+  const allIsActive = activeCardFilter === null
+  const allItem = document.createElement('div')
+  allItem.className = `card-code-item ${allIsActive ? 'active' : ''}`
+  allItem.dataset.code = 'ALL'
+  allItem.textContent = `All (${totalSets})`
+  grid.appendChild(allItem)
 
   // Render all 42 reference codes
   cardReference.forEach(card => {
@@ -433,20 +429,7 @@ function renderCardCodeGrid() {
 }
 
 function updateCardsetsFeedTitle() {
-  const titleEl = document.getElementById('cardsets-feed-title')
-  const clearBtn = document.getElementById('clear-filter-btn')
-  if (activeCardFilter) {
-    if (activeCardFilter === 'UNCATEGORIZED') {
-      titleEl.textContent = 'Uncategorized Cardsets'
-    } else {
-      const ref = cardReference.find(c => c.code === activeCardFilter)
-      titleEl.textContent = ref ? `${activeCardFilter} — ${ref.name}` : activeCardFilter
-    }
-    if (clearBtn) clearBtn.style.display = ''
-  } else {
-    titleEl.textContent = 'Newest Cardsets'
-    if (clearBtn) clearBtn.style.display = 'none'
-  }
+  // Header removed — no-op, kept for compatibility
 }
 
 // --- Cards Gallery: Cardsets Feed ---
@@ -547,12 +530,11 @@ function createSetCard(set) {
 
   el.innerHTML = `
     <div class="set-card-images">${thumbSlots}</div>
-    ${cardCode ? `<span class="set-card-code">${cardCode}</span>` : ''}
+
     <div class="set-card-info">
       <div class="set-card-left">
         <span class="set-card-txid" title="${set.cardsetTxid}">${shortHash(set.cardsetTxid)}</span>
       </div>
-      <div class="set-card-members">${set.memberCount} uploads</div>
     </div>
     ${isUnconfirmed ? '<span class="set-card-badge" style="color:#fbbf24">unconfirmed</span>' : ''}
   `

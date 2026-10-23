@@ -43,27 +43,13 @@
       <main id="sets-view" class="view" style="display:none">
         <!-- Card Code Index -->
         <section id="card-code-index" class="card-code-section">
-          <div class="page-header">
-            <h1>Card Directory</h1>
-            <span class="page-stats" id="card-code-stats"></span>
-          </div>
           <div id="card-code-grid" class="card-code-grid"></div>
         </section>
 
         <!-- Newest Cardsets Feed -->
         <section id="cardsets-feed" class="cardsets-feed-section">
-          <div class="page-header">
-            <div class="feed-title-row">
-            <h1 id="cardsets-feed-title">Newest Cardsets</h1>
-            <div class="feed-title-right">
-              <span class="page-stats" id="sets-stats"></span>
-              <button id="clear-filter-btn" style="display:none">Clear filter</button>
-            </div>
-          </div>
-          </div>
           <div id="sets-loading" class="loading">
             <div class="spinner"></div>
-            <p>Loading cards from chain…</p>
           </div>
           <div id="sets-grid" class="sets-grid" style="display:none"></div>
           <div id="sets-empty" class="empty" style="display:none">
@@ -73,36 +59,28 @@
       </main>
     </div>
 
-    <!-- Upload Detail Page (/cardimg/:txid) -->
-    <div id="upload-page" style="display:none">
-      <div class="page-header">
-        <a href="/" class="back-link">← Back</a>
-        <h1>Upload</h1>
+    <!-- Unified Viewer Page (/card/:txid and /cardimg/:txid) -->
+    <div id="viewer-page" style="display:none">
+      <!-- Top bar: back + title -->
+      <div id="viewer-topbar">
+        <a href="/" class="back-link" id="viewer-back">← Back</a>
       </div>
-      <div class="detail-layout">
-        <div class="detail-image-wrap">
-          <img id="upload-image" src="" alt="Card image">
-        </div>
-        <div class="detail-meta" id="upload-meta"></div>
-      </div>
-    </div>
 
-    <!-- Card Detail Page (/card/:txid) -->
-    <div id="card-page" style="display:none">
-      <div class="page-header">
-        <a href="/" class="back-link">← Back</a>
-        <h1>Card</h1>
-      </div>
-      <div class="detail-layout">
-        <div class="detail-image-wrap">
-          <div class="card-primary-wrap">
-            <img id="card-primary-image" src="" alt="Card image" style="cursor:zoom-in">
-            <div id="card-zoom-hint" class="card-gallery-zoom-hint">🔍</div>
+      <!-- Main image area -->
+      <div id="viewer-main">
+        <div id="viewer-image-wrap">
+          <img id="viewer-image" src="" alt="Card image" />
+          <div id="viewer-loading" class="loading" style="display:none">
+            <div class="spinner"></div>
           </div>
-          <div id="card-thumb-strip" class="card-thumb-strip"></div>
         </div>
-        <div class="detail-meta" id="card-detail-meta"></div>
       </div>
+
+      <!-- Bottom: thumbnail strip (cardset) or appears-in chips (cardimg) -->
+      <div id="viewer-bottom"></div>
+
+      <!-- Metadata (below thumbnails) -->
+      <div id="viewer-meta"></div>
     </div>
   </div>
 
@@ -111,11 +89,6 @@
     <span class="sep">·</span>
     <span>CARDIMG Protocol</span>
   </footer>
-
-  <div id="lightbox" style="display:none">
-    <button id="lightbox-close">&times;</button>
-    <img id="lightbox-img" src="" alt="">
-  </div>
 
   <script src="/config.js"></script>
   <script src="/app.js"></script>

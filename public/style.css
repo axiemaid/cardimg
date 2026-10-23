@@ -1,4 +1,4 @@
-/* CARDIMG Viewer — Clean dark gallery */
+/* CARDIMG Viewer — Clean dark gallery + immersive viewer */
 
 :root {
   --bg: #0d0d0f;
@@ -45,21 +45,6 @@ body {
   letter-spacing: -0.02em;
   margin-bottom: 0.5rem;
   color: var(--text-dim);
-}
-
-.header-protocol {
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-dim);
-}
-
-.header-txid {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 1.1rem;
-  color: var(--text-dim);
-  font-weight: 400;
-  word-break: break-all;
 }
 
 /* --- Header --- */
@@ -127,18 +112,6 @@ body {
   color: var(--text);
 }
 
-.tab-btn .badge {
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
-  line-height: 1.4;
-}
-
 .page-stats {
   font-size: 0.85rem;
   color: var(--text-dim);
@@ -175,9 +148,7 @@ body {
   position: relative;
 }
 
-.card:hover {
-  opacity: 0.85;
-}
+.card:hover { opacity: 0.85; }
 
 .card-image {
   width: 100%;
@@ -235,12 +206,6 @@ body {
   text-overflow: ellipsis;
 }
 
-.card-size {
-  font-size: 0.72rem;
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
-
 /* --- Loading --- */
 
 .loading {
@@ -270,102 +235,6 @@ body {
   color: var(--text-dim);
 }
 
-/* --- Detail Page Headers (upload + card pages) --- */
-
-#upload-page .page-header,
-#card-page .page-header {
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 0.5rem;
-  padding: 1.5rem 1.5rem 1rem;
-}
-
-#upload-page .page-header h1,
-#card-page .page-header h1 {
-  margin-bottom: 0;
-}
-
-#upload-page .page-header .back-link,
-#card-page .page-header .back-link {
-  margin-bottom: 0;
-}
-
-/* --- Upload Detail Page --- */
-
-.detail-layout {
-  display: flex;
-  gap: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1.5rem 2rem;
-  align-items: flex-start;
-}
-
-.detail-image-wrap {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  min-height: 300px;
-  overflow: hidden;
-  position: relative;
-}
-
-.detail-image-wrap > img {
-  max-width: 100%;
-  max-height: 80vh;
-  object-fit: contain;
-}
-
-.detail-meta {
-  width: 560px;
-  flex-shrink: 0;
-  padding: 1.5rem;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: visible;
-}
-
-.detail-meta h3 {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-faint);
-  margin-bottom: 0.35rem;
-  margin-top: 1.25rem;
-}
-
-.detail-meta h3:first-child { margin-top: 0; }
-
-.detail-meta p, .detail-meta a {
-  font-size: 0.88rem;
-  word-break: break-all;
-  line-height: 1.5;
-}
-
-.detail-meta a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.detail-meta a:hover { color: var(--accent-hover); }
-
-.meta-value {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.82rem;
-  color: var(--text);
-  word-break: break-all;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
 .back-link {
   display: inline-block;
   font-size: 0.85rem;
@@ -375,122 +244,6 @@ body {
 }
 
 .back-link:hover { color: var(--text); }
-
-/* --- Lightbox --- */
-
-#lightbox {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.92);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  cursor: zoom-out;
-}
-
-#lightbox-img {
-  max-width: 92vw;
-  max-height: 90vh;
-  object-fit: contain;
-  border-radius: 4px;
-  cursor: grab;
-  transform-origin: center center;
-  transition: transform 0.05s ease-out;
-}
-
-#lightbox-close {
-  position: absolute;
-  top: 1rem;
-  right: 1.5rem;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 2rem;
-  cursor: pointer;
-  z-index: 1001;
-  line-height: 1;
-}
-
-#lightbox-close:hover {
-  color: var(--accent);
-}
-
-/* --- Card Detail Page --- */
-
-/* --- Cardset detail: thumbnail strip + zoom hint inside detail-image-wrap --- */
-
-.card-primary-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
-.card-thumb-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.card-thumb {
-  width: 100px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  border-radius: 6px;
-  overflow: hidden;
-  transition: border-color 0.15s;
-  background: var(--bg-elev2);
-}
-
-.card-thumb:hover {
-  border-color: var(--border);
-}
-
-.card-thumb.active {
-  border-color: var(--accent);
-}
-
-.card-thumb img {
-  width: 100%;
-  aspect-ratio: 3/4;
-  object-fit: contain;
-  background: var(--bg-elev2);
-  display: block;
-}
-
-.card-thumb-role {
-  font-size: 0.65rem;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-align: center;
-  padding: 2px 0 4px;
-}
-
-.card-gallery-zoom-hint {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(4px);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  pointer-events: none;
-  opacity: 1;
-  z-index: 1;
-}
 
 /* --- Footer --- */
 
@@ -502,13 +255,8 @@ footer {
   border-top: 1px solid var(--border);
 }
 
-footer a {
-  color: var(--text-dim);
-  text-decoration: none;
-}
-
+footer a { color: var(--text-dim); text-decoration: none; }
 footer a:hover { color: var(--text); }
-
 footer .sep { margin: 0 0.5rem; }
 
 /* --- Sets Grid --- */
@@ -527,9 +275,7 @@ footer .sep { margin: 0 0.5rem; }
   transition: opacity 0.2s ease;
 }
 
-.set-card:hover {
-  opacity: 0.85;
-}
+.set-card:hover { opacity: 0.85; }
 
 .set-card-images {
   display: flex;
@@ -573,12 +319,6 @@ footer .sep { margin: 0 0.5rem; }
   text-overflow: ellipsis;
 }
 
-.set-card-members {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-
 .set-card-badge {
   position: absolute;
   top: 8px;
@@ -591,132 +331,18 @@ footer .sep { margin: 0 0.5rem; }
   border-radius: 4px;
 }
 
-/* --- Set Members (shared: card detail page) --- */
-
-.set-members {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: center;
-}
-
-/* --- Cardset refs (on upload detail page) --- */
-
-.set-member img {
-  width: 100%;
-  aspect-ratio: 3/4;
-  object-fit: contain;
-  background: var(--bg-elev2);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.set-member img:hover {
-  border: 2px solid var(--accent);
-}
-
-.set-member .set-member-placeholder {
-  width: 100%;
-  aspect-ratio: 3/4;
-  background: var(--bg-elev2);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-faint);
-  font-size: 0.8rem;
-}
-
-.set-member-role {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.set-member-txid {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.65rem;
-  color: var(--text-faint);
-}
-
-.set-member {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  width: 200px;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-
-.cardset-ref {
-  margin-top: 0.5rem;
-}
-
-.cardset-thumbs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.cardset-thumb {
-  width: 120px;
-  aspect-ratio: 3/4;
-  object-fit: cover;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-  background: var(--bg-elev2);
-}
-
-.cardset-thumb:hover {
-  border: 2px solid var(--accent);
-}
-
-.cardset-view-link {
-  display: inline-block;
-  font-size: 0.88rem;
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.cardset-view-link:hover { color: var(--accent-hover); }
-
-.cardset-ref-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-  font-size: 0.82rem;
-  cursor: pointer;
-  color: var(--accent);
-}
-
-.cardset-ref-item:hover { color: var(--accent-hover); }
-
-.cardset-ref-item .role {
-  font-size: 0.7rem;
-  color: var(--text-faint);
-  text-transform: uppercase;
-}
-
 /* --- Card Code Directory --- */
 
 .card-code-section {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 0.5rem;
+  padding: 2rem 2rem 0.5rem;
 }
 
 .card-code-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.25rem 0;
-  margin-bottom: 0;
 }
 
 .card-code-item {
@@ -730,59 +356,23 @@ footer .sep { margin: 0 0.5rem; }
   text-align: center;
 }
 
-.card-code-item:hover {
-  color: var(--text);
-}
+.card-code-item:hover { color: var(--text); }
 
 .card-code-item.active {
   color: #ef4444;
   font-weight: 700;
 }
 
-.card-code-item.empty {
-  color: var(--text-faint);
-}
-
-.card-code-item.empty:hover {
-  color: var(--text-dim);
-}
-
-.card-code-item.uncategorized {
-  font-style: italic;
-}
-
-.card-code-count {
-  color: var(--text-faint);
-}
-
-.card-code-item.active .card-code-count {
-  color: var(--accent-hover);
-}
+.card-code-item.empty { color: var(--text-faint); }
+.card-code-item.empty:hover { color: var(--text-dim); }
+.card-code-item.uncategorized { font-style: italic; }
 
 /* --- Cardsets Feed Section --- */
 
 .cardsets-feed-section {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem 1.5rem 1.5rem;
-}
-
-/* --- Set Card Code Badge --- */
-
-.set-card-code {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(99, 102, 241, 0.9);
-  backdrop-filter: blur(4px);
-  color: #fff;
-  font-size: 0.62rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
-  z-index: 1;
-  pointer-events: none;
+  padding: 1.5rem 2rem 1.5rem;
 }
 
 .set-card-left {
@@ -792,59 +382,267 @@ footer .sep { margin: 0 0.5rem; }
   min-width: 0;
 }
 
-/* --- Card Detail Header (card code variant) --- */
+/* =============================================
+   UNIFIED IMMERSIVE VIEWER
+   ============================================= */
 
-.header-card-code {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.02em;
-}
-
-.header-card-name {
-  font-size: 1.1rem;
-  font-weight: 400;
-  color: var(--text-dim);
-}
-
-/* --- Clear Filter Button --- */
-
-.feed-title-row {
+#viewer-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg);
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  z-index: 200;
+  overflow-y: auto;
+}
+
+#viewer-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem max(2rem, calc((100% - 1400px) / 2));
+  background: linear-gradient(to bottom, rgba(13,13,15,0.9), transparent);
+  pointer-events: none;
   width: 100%;
 }
 
-.feed-title-right {
+#viewer-topbar > * { pointer-events: auto; }
+
+#viewer-back {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#viewer-back:hover { color: var(--text); }
+
+#viewer-title {
+  flex: 1;
+  text-align: center;
+  font-size: 1rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-card-code {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+.viewer-card-name {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+.viewer-txid {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+/* Main image area */
+
+#viewer-main {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  padding: 3.5rem 2rem 0.5rem;
+  height: 75vh;
+  min-height: 300px;
 }
 
-#clear-filter-btn {
-  background: var(--bg-elev2);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 6px;
+#viewer-image-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+#viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
+}
+
+#viewer-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 5;
+}
+
+/* Bottom area: thumb strip or appears-in chips */
+
+#viewer-bottom {
+  flex-shrink: 0;
+  z-index: 10;
+  background: rgba(13,13,15,0.95);
+  border-top: 1px solid var(--border);
+  padding: 0.75rem max(2rem, calc((100% - 1400px) / 2));
+  display: flex;
+  justify-content: center;
+}
+
+.viewer-thumb-strip {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 0.25rem;
+}
+
+.viewer-thumb {
+  width: 72px;
+  flex-shrink: 0;
   cursor: pointer;
-  font-family: inherit;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-elev2);
+  transition: border-color 0.15s;
 }
 
-#clear-filter-btn:hover {
-  color: var(--text);
-  border-color: var(--accent);
+.viewer-thumb:hover { border-color: var(--border); }
+.viewer-thumb.active { border-color: var(--accent); }
+
+.viewer-thumb img {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: contain;
+  background: var(--bg-elev2);
+  display: block;
 }
+
+.viewer-thumb-role {
+  font-size: 0.58rem;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: 2px 0 4px;
+}
+
+/* Appears-in chips (cardimg context) */
+
+.viewer-appears-chips {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.viewer-appears-label {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.viewer-chips-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.viewer-appears-chip {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.viewer-appears-chip:hover {
+  border-color: var(--accent);
+  background: var(--bg-elev2);
+}
+
+/* Metadata below thumbnails */
+
+#viewer-meta {
+  flex-shrink: 0;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border);
+  padding: 1rem max(2rem, calc((100% - 1400px) / 2)) 2rem;
+}
+
+#viewer-meta h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  margin-bottom: 0.35rem;
+  margin-top: 1rem;
+}
+
+#viewer-meta h3:first-child { margin-top: 0; }
+
+#viewer-meta p,
+#viewer-meta a {
+  font-size: 0.85rem;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+#viewer-meta a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+#viewer-meta a:hover { color: var(--accent-hover); }
+
+
+
+.meta-value {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.82rem;
+  color: var(--text);
+  word-break: break-all;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.viewer-appears-link {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--accent) !important;
+  text-decoration: none !important;
+}
+
+.viewer-appears-link:hover { color: var(--accent-hover) !important; }
 
 /* --- Responsive --- */
-
-@media (max-width: 1000px) {
-  .detail-layout { flex-direction: column; padding: 0 1rem 1.5rem; }
-  .detail-meta { width: 100%; }
-  .detail-image-wrap img { max-height: 60vh; }
-}
 
 @media (max-width: 1100px) {
   .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -859,14 +657,18 @@ footer .sep { margin: 0 0.5rem; }
   .title { font-size: 0.95rem; }
   .tab-toggle { margin-left: auto; }
   .page-stats { font-size: 0.75rem; }
-  #gallery { padding: 0.5rem 0.5rem 1rem; }
+  #gallery { padding: 0.5rem 1rem 1rem; }
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .card-info { padding: 0.3rem 0.15rem; }
-  .card-txid, .card-size { font-size: 0.6rem; }
+  .card-txid { font-size: 0.6rem; }
   .card-code-grid { grid-template-columns: repeat(3, 1fr); }
   .sets-grid { grid-template-columns: 1fr; padding: 0.5rem 0; }
-  .card-code-section { padding: 1.5rem 0.75rem 0; }
-  .cardsets-feed-section { padding: 1.5rem 0.75rem; }
-  .set-member { width: 120px; }
-}
+  .card-code-section { padding: 1.5rem 1rem 0; }
+  .cardsets-feed-section { padding: 1.5rem 1rem; }
 
+  #viewer-main { padding: 3rem 1rem 0.5rem; }
+  #viewer-topbar { padding: 0.75rem 1rem; }
+  #viewer-bottom { padding: 0.75rem 1rem; }
+  #viewer-meta { padding: 1rem 1rem 2rem; }
+  .viewer-thumb { width: 60px; }
+}

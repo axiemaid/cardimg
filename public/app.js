@@ -244,8 +244,8 @@ function createCardElement(card, index) {
   const isUnconfirmed = !card.blockHeight
 
   el.innerHTML = `
-    <div class="card-image-wrap" style="position:relative">
-      <img class="card-image loading" alt="Upload ${shortHash(card.txid)}" />
+    <div class="card-image-wrap loading" style="position:relative">
+      <img class="card-image" alt="Upload ${shortHash(card.txid)}" />
       ${isUnconfirmed ? '<span class="card-badge unconfirmed">unconfirmed</span>' : ''}
     </div>
     <div class="card-info">
@@ -258,10 +258,16 @@ function createCardElement(card, index) {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         img.src = `${API}/thumb/${card.hash}`
-        img.onload = () => img.classList.remove('loading')
+        img.onload = () => {
+          const wrap = el.querySelector('.card-image-wrap')
+          if (wrap) wrap.classList.remove('loading')
+          img.classList.add('loaded')
+        }
         img.onerror = () => {
-          img.classList.remove('loading')
+          const wrap = el.querySelector('.card-image-wrap')
+          if (wrap) wrap.classList.remove('loading')
           img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280"><rect width="200" height="280" fill="%231c1c22"/><text x="100" y="140" text-anchor="middle" fill="%235a5a66" font-size="14">Failed to load</text></svg>'
+          img.classList.add('loaded')
         }
         observer.unobserve(el)
       }
@@ -430,7 +436,11 @@ function createSetCard(set) {
           const txid = slot.dataset.txid
           const img = document.createElement('img')
           img.alt = 'Upload ' + shortHash(txid)
-          img.onload = () => { slot.innerHTML = ''; slot.appendChild(img) }
+          img.onload = () => {
+            slot.innerHTML = ''
+            slot.appendChild(img)
+            requestAnimationFrame(() => { img.style.opacity = '1' })
+          }
           img.onerror = () => { slot.querySelector('.set-placeholder').textContent = 'N/A' }
           img.src = `${API}/thumb/tx/${txid}`
         })

@@ -157,14 +157,21 @@ body {
   display: block;
   border-radius: var(--radius);
   min-width: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.card-image.loading {
+.card-image.loaded {
+  opacity: 1;
+}
+
+.card-image-wrap.loading {
   background: var(--bg-elev2);
   background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
 @keyframes shimmer {
@@ -291,6 +298,8 @@ footer .sep { margin: 0 0.5rem; }
   width: 100%;
   height: auto;
   display: block;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .set-card-images .set-placeholder {

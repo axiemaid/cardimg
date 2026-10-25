@@ -861,7 +861,7 @@ footer .sep { margin: 0 0.5rem; }
 .scan-status { font-weight: 600; margin-bottom: 0.25rem; font-size: 1rem; }
 .scan-status.pass { color: #4a4; }
 .scan-status.fail { color: #f44; }
-.scan-status.analyzing { color: var(--accent); }
+.scan-status.analyzing { color: var(--text-dim); }
 .scan-status.ready { color: #4a4; }
 .scan-status.uploading { color: #fa0; }
 

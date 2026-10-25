@@ -1,0 +1,8 @@
+{
+  "mode": "shadow",
+  "maxDistance": 12,
+  "minMargin": 4,
+  "allowDuplicates": false,
+  "detectorPath": "/Users/axiemaid/.openclaw/cardid-detector",
+  "referenceDir": "/Users/axiemaid/.openclaw/cardid-detector/references"
+}

@@ -276,7 +276,59 @@ async function ensureRefs() {
 
 async function scanImage(file, zoneName) {
   const refs = await ensureRefs()
-  return await window.HBValidator.validateCardImage(file, zoneName, refs)
+  const result = await window.HBValidator.validateCardImage(file, zoneName, refs)
+
+  // Run detector in shadow mode for front scans only
+  if (zoneName === 'front') {
+    result.detector = await runDetectorShadow(file)
+
+    // Log the comparison server-side
+    logDetectorComparison(file, result)
+  }
+
+  return result
+}
+
+// Log front-match vs detector comparison to server
+async function logDetectorComparison(file, scanResult) {
+  try {
+    const fm = scanResult.matchedCode
+      ? { code: scanResult.matchedCode, mae: scanResult.mae, matched: scanResult.matched }
+      : { code: null, mae: scanResult.mae, matched: false }
+    const det = scanResult.detector || {}
+    await fetch(`${API}/detector/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: file.name,
+        frontMatch: fm,
+        detector: {
+          code: det.code || null,
+          distance: det.distance,
+          margin: det.margin,
+          ok: det.ok,
+        },
+      }),
+    })
+  } catch {}
+}
+
+// Run cardid-detector in shadow mode (no gate, just log)
+async function runDetectorShadow(file) {
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    const resp = await fetch(`${API}/detector/match`, {
+      method: 'POST',
+      body: formData,
+    })
+    if (!resp.ok) return { ok: false, error: `HTTP ${resp.status}` }
+    const data = await resp.json()
+    if (data.skipped) return { ok: false, skipped: true }
+    return data
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
 }
 
 function handleFileDrop(zoneName, file) {
@@ -354,6 +406,16 @@ function renderScanResult(scan) {
       html += `<div class="scan-detail">Card: ${r.cardWidth}×${r.cardHeight}px</div>`
     }
     html += `<div class="scan-detail">Upload: ${(r.size / 1024).toFixed(1)}KB</div>`
+    // Detector shadow result (front scans only)
+    if (r.detector && !r.detector.skipped) {
+      const d = r.detector
+      if (d.ok) {
+        const matchIcon = d.code === (r.matchedCode || r.code) ? '✓' : '≠'
+        html += `<div class="scan-detail" style="color:var(--text-dim)">Detector: ${matchIcon} ${d.code} (d=${d.distance} m=${d.margin})</div>`
+      } else {
+        html += `<div class="scan-detail" style="color:var(--text-dim)">Detector: ${d.reason || d.error || 'fail'}</div>`
+      }
+    }
     if (r.backResult) {
       const br = r.backResult
 

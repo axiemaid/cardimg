@@ -356,7 +356,7 @@ function renderScanResult(scan) {
     html += `<div class="scan-detail">Upload: ${(r.size / 1024).toFixed(1)}KB</div>`
     if (r.backResult) {
       const br = r.backResult
-      html += `<div class="scan-detail">Back verified · hash=${br.hashDist}/256 · hist=${br.histSim}</div>`
+
     }
     for (const w of r.warnings || []) {
       html += `<div class="scan-detail" style="color:var(--text-dim)">⚠ ${w}</div>`

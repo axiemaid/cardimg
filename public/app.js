@@ -348,7 +348,7 @@ function renderScanResult(scan) {
 
     // Scanner-style details
     if (r.imageDpi) {
-      html += `<div class="scan-detail" style="margin-top:0.3rem">${r.orientation || ''} · ${r.imageDpi} DPI</div>`
+      html += `<div class="scan-detail" style="margin-top:0.3rem">${r.imageDpi} DPI</div>`
     }
     if (r.cardWidth && r.cardHeight) {
       html += `<div class="scan-detail">Card: ${r.cardWidth}×${r.cardHeight}px</div>`

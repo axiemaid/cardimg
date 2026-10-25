@@ -368,7 +368,7 @@ function renderScanResult(scan) {
     }
   } else {
     if (barLeft) {
-      barLeft.innerHTML = `<button class="scan-btn-remove" onclick="removeScan('${zone}', ${position})">Dismiss</button>`
+      barLeft.innerHTML = `<button class="scan-btn-remove" onclick="removeScan('${zone}', ${position})">Remove</button>`
     }
     let html = `<div class="scan-status fail">✗ Failed</div>`
     const errs = r.errors || []

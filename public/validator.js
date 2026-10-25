@@ -386,6 +386,9 @@
     E_DIMENSIONS: (reason) => reason,
     E_ASPECT: "Image doesn't look like a single card. Crop to the card edges.",
     E_BACK_MISMATCH: 'Back image doesn\'t match the Hyper Battle card back.',
+    E_FLUSH: 'Card touches image edges — use a flatbed scanner with the card centered on a black or white bed.',
+    E_BACKGROUND: 'Background is not uniform — use a flatbed scanner with a clean black or white scanning bed.',
+    E_NO_BACKGROUND: 'No background margin detected — card must be surrounded by flat scanner background on all sides.',
   }
 
   // ============================================================
@@ -467,13 +470,30 @@
     // Flush edge detection
     const flushEdges = detectFlushEdges(edges, w, h)
 
+    // Hard gate: card must have background margin on all sides (flatbed scan)
+    if (flushEdges.hasFlush) {
+      return { passed: false, errors: [{ code: 'E_FLUSH', message: ERRORS.E_FLUSH }], warnings: [] }
+    }
+
+    // Hard gate: background must be uniform (clean scanner bed)
+    if (!background.isBackground) {
+      return { passed: false, errors: [{ code: 'E_BACKGROUND', message: ERRORS.E_BACKGROUND }], warnings: [] }
+    }
+
+    // Hard gate: aspect ratio must match a trading card (63:88 portrait or landscape)
+    const cardAspect = edges.cardWidth / edges.cardHeight
+    const expectedAspect = ASPECT_RATIO // 63/88 ≈ 0.716
+    const landscapeAspect = 1 / expectedAspect
+    const aspectMatch = (Math.abs(cardAspect - expectedAspect) <= ASPECT_TOLERANCE) || (Math.abs(cardAspect - landscapeAspect) <= ASPECT_TOLERANCE)
+    if (!aspectMatch) {
+      return { passed: false, errors: [{ code: 'E_ASPECT', message: ERRORS.E_ASPECT }], warnings: [] }
+    }
+
     // Crop (scanner 5% max margin logic)
     const crop = computeCrop(edges, w, h)
 
-    // Build warnings
+    // Build warnings (only non-fatal issues remain)
     const warnings = []
-    if (flushEdges.hasFlush) warnings.push(`Card is flush with image edge (${flushEdges.flush.join(', ')}) — verify card is not cut off`)
-    if (!background.isBackground) warnings.push(`Background not uniform (${Math.round(background.bgRatio * 100)}%) — scanner bed may have debris`)
 
     // --- Crop to canvas (full resolution) ---
     let cropCanvas, cropCtx, cropW, cropH

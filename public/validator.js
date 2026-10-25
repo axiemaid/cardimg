@@ -23,7 +23,7 @@
   const REF_CARD_HEIGHT_600 = 2005
   const REF_DPI = 600
   const CARD_SIZE_TOLERANCE = 0.10
-  const MIN_DPI = 500
+  const MIN_DPI = 150
   const BLACK_THRESHOLD = 30
   const WHITE_THRESHOLD = 225
   const CONTENT_SAT_THRESHOLD = 0.08
@@ -36,7 +36,7 @@
   const ASPECT_RATIO = 63 / 88
   const ASPECT_TOLERANCE = 0.06
   const MIN_BYTES = 50 * 1024
-  const MIN_SHORT_SIDE = 600
+  const MIN_SHORT_SIDE = 400
   const MAX_LONG_SIDE = 6000
 
   // ============================================================

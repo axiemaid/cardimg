@@ -206,11 +206,12 @@ body {
 
 .card-txid {
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-left: 10px;
 }
 
 /* --- Loading --- */
@@ -318,11 +319,12 @@ footer .sep { margin: 0 0.5rem; }
 }
 
 .set-card-txid {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-left: 10px;
 }
 
 .set-card-badge {
@@ -649,7 +651,318 @@ footer .sep { margin: 0 0.5rem; }
 
 .viewer-appears-link:hover { color: var(--accent-hover) !important; }
 
+/* --- Card Upload Zones --- */
+
+#upload-zone {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 0 1.5rem;
+}
+
+/* Collapsed: upload toggle button */
+
+.upload-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #fff;
+  color: #0d0d0f;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.8rem 1.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  user-select: none;
+  transition: background 0.15s, transform 0.1s;
+  margin-top: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.upload-toggle:hover {
+  background: #e0e0e0;
+}
+
+.upload-toggle:active {
+  transform: scale(0.99);
+}
+
+.upload-toggle-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0d0d0f;
+  user-select: none;
+}
+
+/* Expanded: front + back zones */
+
+.card-upload-zones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  max-width: 750px;
+  margin: 1.5rem auto 0;
+}
+
+.card-zone {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-zone-drop {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  aspect-ratio: 3/4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--bg-elev);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-zone-drop:hover,
+.card-zone-drop.dragover {
+  border-color: #fff;
+  background: var(--bg-elev2);
+}
+
+.card-zone-drop.passed {
+  border-color: #4a4;
+  border-style: solid;
+}
+
+.card-zone-placeholder {
+  color: var(--text-faint);
+  font-size: 3rem;
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* Thumbnail fills entire zone when populated */
+
+.zone-result-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Summary area below zone (desktop) / beside zone (mobile) */
+
+.card-zone-summary {
+  padding: 0.35rem 0.25rem 0;
+  font-size: 0.68rem;
+  min-height: 1.2rem;
+}
+
+.card-zone-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 1.8rem;
+}
+
+.card-zone-bar-left {
+  flex: 0 0 auto;
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.card-zone-bar-right {
+  flex: 0 0 auto;
+  min-width: 60px;
+}
+
+.card-zone-label {
+  font-weight: 400;
+  font-size: 1.1rem;
+  color: #c0c0c8;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1 1 auto;
+}
+
+.card-zone-details {
+  text-align: center;
+  margin-top: 0.1rem;
+}
+
+.scan-status.ready {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a4;
+}
+
+.card-zone-summary .scan-filename {
+  font-size: 0.65rem;
+  margin-bottom: 0.1rem;
+}
+.card-zone-summary .scan-check-grid {
+  font-size: 0.65rem;
+  gap: 1px 0.4rem;
+}
+.card-zone-summary .scan-actions {
+  margin-top: 0.2rem;
+}
+.card-zone-summary .scan-btn-remove {
+  font-size: 0.65rem;
+  padding: 3px 10px;
+}
+
+.upload-wallet-status {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  margin-top: 0.5rem;
+  text-align: center;
+  display: none;
+}
+.upload-wallet-status.visible { display: block; }
+.upload-wallet-status.low { color: #fbbf24; }
+.upload-wallet-status.none { color: #ef4444; }
+
+.scan-results {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.scan-result {
+  background: var(--bg-elev);
+  border-radius: var(--radius);
+  padding: 1rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.scan-result.passed { border-left: 4px solid #4a4; }
+.scan-result.failed { border-left: 4px solid #f44; }
+.scan-result.analyzing { border-left: 4px solid var(--accent); }
+.scan-result.ready { border-left: 4px solid var(--accent); }
+.scan-result.uploading { border-left: 4px solid #fa0; }
+
+.scan-preview { flex-shrink: 0; }
+.scan-preview img { max-width: 280px; max-height: 400px; border-radius: 4px; background: var(--bg-elev2); display: block; }
+.scan-preview-label { font-size: 0.6rem; color: var(--text-faint); text-align: center; margin-top: 4px; }
+
+.scan-info { flex: 1; min-width: 0; }
+.scan-filename { font-weight: 600; margin-bottom: 0.25rem; word-break: break-all; }
+.scan-detail { font-size: 0.82rem; color: var(--text-dim); line-height: 1.6; }
+.scan-detail a { color: var(--accent); text-decoration: none; }
+.scan-detail a:hover { color: var(--accent-hover); }
+
+.scan-status { font-weight: 600; margin-bottom: 0.25rem; }
+.scan-status.pass { color: #4a4; }
+.scan-status.fail { color: #f44; }
+.scan-status.analyzing { color: var(--accent); }
+.scan-status.ready { color: #4a4; }
+.scan-status.uploading { color: #fa0; }
+
+.scan-txid { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.78rem; color: var(--accent); word-break: break-all; }
+
+.scan-check-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 0.75rem;
+  font-size: 0.82rem;
+}
+.scan-label { color: var(--text-faint); }
+.scan-value { color: var(--text-dim); }
+.scan-pass { color: #4a4; }
+.scan-fail { color: #f66; }
+.scan-warn { color: #fa0; font-size: 0.82rem; margin-top: 0.25rem; }
+.scan-fail-text { color: #f66; font-size: 0.82rem; }
+
+.scan-actions { display: flex; gap: 0.5rem; }
+.scan-btn-remove {
+  background: var(--bg-elev2);
+  color: var(--text-dim);
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+.scan-btn-remove:hover { background: var(--border); color: var(--text); }
+.scan-btn-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.scan-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--accent);
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.scan-batch-bar {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg-elev2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.scan-batch-bar.hidden { display: none; }
+.scan-batch-info { color: var(--text-dim); font-size: 0.9rem; }
+.scan-batch-info strong { color: var(--text); }
+
+.scan-btn-upload-all {
+  background: #4a4;
+  color: #fff;
+  padding: 10px 28px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 100%;
+  margin-top: 0.75rem;
+  display: none;
+}
+.scan-btn-upload-all.visible { display: block; }
+.scan-btn-upload-all:hover { background: #5b5; }
+.scan-btn-upload-all:disabled { background: var(--bg-elev2); color: var(--text-faint); cursor: not-allowed; }
+
+.scan-summary {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(74, 170, 74, 0.06);
+  border: 1px solid rgba(74, 170, 74, 0.3);
+  border-radius: var(--radius);
+}
+.scan-summary.hidden { display: none; }
+.upload-summary-title { color: #4a4; font-weight: 600; font-size: 1.05rem; margin-bottom: 0.5rem; }
+
 /* --- Responsive --- */
+
+/* Desktop-only upload zone tweaks */
+@media (min-width: 769px) {
+  .card-upload-zones {
+    gap: 2rem;
+    max-width: 600px;
+  }
+  .scan-btn-upload-all,
+  .upload-wallet-status {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 
 @media (max-width: 1100px) {
   .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -678,4 +991,7 @@ footer .sep { margin: 0 0.5rem; }
   #viewer-bottom { padding: 0.75rem 1rem; }
   #viewer-meta { padding: 1rem 1rem 4rem; }
   .viewer-thumb { width: 72px; }
+
+  /* Mobile: zones fill width */
+  .card-upload-zones { max-width: 100%; }
 }

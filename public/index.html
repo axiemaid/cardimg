@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CARDIMG Explorer</title>
+  <meta name="description" content="On-chain card image registry — browse images inscribed on the BSV blockchain">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand" id="brand-link">
+      <span class="logo">🃏</span>
+      <span class="title">CARDIMG Explorer</span>
+    </div>
+    <div class="tab-toggle" id="tab-toggle">
+      <button class="tab-btn active" data-tab="cards">Cards</button>
+      <button class="tab-btn" data-tab="uploads">Upload</button>
+    </div>
+  </header>
+
+  <div id="app">
+    <!-- Gallery views (uploads + cards tabs) -->
+    <div id="gallery-view">
+      <!-- Uploads Tab -->
+      <main id="gallery" class="view active">
+        <!-- Card upload zones -->
+        <div id="upload-zone">
+          <!-- Front + back zones -->
+          <div class="card-upload-zones" id="card-upload-zones">
+            <div class="card-zone" data-zone="front">
+              <div class="card-zone-drop" id="zone-front">
+                <div class="card-zone-placeholder">+</div>
+                <input type="file" accept="image/*" style="display:none" />
+              </div>
+              <div class="card-zone-summary" id="summary-front">
+                <div class="card-zone-bar">
+                  <div class="card-zone-bar-left" id="bar-left-front"></div>
+                  <div class="card-zone-label">Front</div>
+                  <div class="card-zone-bar-right"></div>
+                </div>
+                <div class="card-zone-details" id="details-front"></div>
+              </div>
+            </div>
+            <div class="card-zone" data-zone="back">
+              <div class="card-zone-drop" id="zone-back">
+                <div class="card-zone-placeholder">+</div>
+                <input type="file" accept="image/*" style="display:none" />
+              </div>
+              <div class="card-zone-summary" id="summary-back">
+                <div class="card-zone-bar">
+                  <div class="card-zone-bar-left" id="bar-left-back"></div>
+                  <div class="card-zone-label">Back</div>
+                  <div class="card-zone-bar-right"></div>
+                </div>
+                <div class="card-zone-details" id="details-back"></div>
+              </div>
+            </div>
+          </div>
+          <div class="upload-wallet-status visible" id="upload-wallet-status"></div>
+          <button class="scan-btn-upload-all visible" id="btn-upload-all" disabled>Upload Images</button>
+          <div id="upload-summary" class="scan-summary hidden"></div>
+        </div>
+
+        <div class="page-header">
+          <h1>Newest Uploads</h1>
+          <span class="page-stats" id="stats-bar"><span id="stat-count">—</span> uploads</span>
+        </div>
+
+        <div id="loading" class="loading">
+          <div class="spinner"></div>
+          <p>Loading uploads from chain…</p>
+        </div>
+        <div id="grid" class="grid" style="display:none"></div>
+        <div id="empty" class="empty" style="display:none">
+          <p>No uploads indexed yet.</p>
+        </div>
+      </main>
+
+      <!-- Cards Tab -->
+      <main id="sets-view" class="view" style="display:none">
+        <!-- Card Code Index -->
+        <section id="card-code-index" class="card-code-section">
+          <div id="card-code-grid" class="card-code-grid"></div>
+        </section>
+
+        <!-- Newest Cardsets Feed -->
+        <section id="cardsets-feed" class="cardsets-feed-section">
+          <div id="sets-loading" class="loading">
+            <div class="spinner"></div>
+          </div>
+          <div id="sets-grid" class="sets-grid" style="display:none"></div>
+          <div id="sets-empty" class="empty" style="display:none">
+            <p>No cards indexed yet.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Unified Viewer Page (/card/:txid and /cardimg/:txid) -->
+    <div id="viewer-page" style="display:none">
+      <!-- Top bar: back + title -->
+      <div id="viewer-topbar">
+        <a href="/" class="back-link" id="viewer-back">← Back</a>
+      </div>
+
+      <!-- Main image area -->
+      <div id="viewer-main">
+        <div id="viewer-image-wrap">
+          <img id="viewer-image" src="" alt="Card image" />
+          <div id="viewer-loading" class="loading" style="display:none">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: thumbnail strip (cardset) or appears-in chips (cardimg) -->
+      <div id="viewer-bottom"></div>
+
+      <!-- Metadata (below thumbnails) -->
+      <div id="viewer-meta"></div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://whatsonchain.com" target="_blank" rel="noopener">Powered by WhatsOnChain</a>
+    <span class="sep">·</span>
+    <span>CARDIMG Protocol</span>
+  </footer>
+
+  <script src="/config.js"></script>
+  <script src="/validator.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

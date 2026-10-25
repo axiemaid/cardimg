@@ -302,7 +302,7 @@ function createScanEntry(zoneName, file, position) {
     barLeft.innerHTML = `<button class="scan-btn-remove" onclick="removeScan('${zoneName}', ${position})">Remove</button>`
   }
   if (detailsDiv) {
-    detailsDiv.innerHTML = `<div class="scan-status analyzing"><span class="scan-spinner"></span>Validating...</div>`
+    detailsDiv.innerHTML = `<div class="scan-status analyzing">Validating<span class="pulse-dots">...</span></div>`
   }
 
   return { file, zoneDiv, summaryDiv, detailsDiv, barLeft, position, zone: zoneName, result: null, uploadBuffer: null }
@@ -448,7 +448,7 @@ async function uploadAll() {
       const status = scan.summaryDiv.querySelector('.scan-status')
       if (status) {
         status.className = 'scan-status uploading'
-        status.innerHTML = '<span class="scan-spinner"></span>Uploading...'
+        status.innerHTML = 'Uploading<span class="pulse-dots">...</span>'
       }
       if (scan.barLeft) scan.barLeft.querySelectorAll('.scan-btn-remove').forEach(b => b.disabled = true)
     }
@@ -493,7 +493,7 @@ async function uploadAll() {
               const status = scan.detailsDiv.querySelector('.scan-status')
               if (status) {
                 status.className = 'scan-status uploading'
-                status.innerHTML = `<span class="scan-spinner"></span>${data.progress.message}`
+                status.innerHTML = `${data.progress.message}`
               }
             }
           }

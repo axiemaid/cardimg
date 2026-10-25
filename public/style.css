@@ -858,12 +858,21 @@ footer .sep { margin: 0 0.5rem; }
 .scan-detail a { color: var(--accent); text-decoration: none; }
 .scan-detail a:hover { color: var(--accent-hover); }
 
-.scan-status { font-weight: 600; margin-bottom: 0.25rem; }
+.scan-status { font-weight: 600; margin-bottom: 0.25rem; font-size: 1rem; }
 .scan-status.pass { color: #4a4; }
 .scan-status.fail { color: #f44; }
 .scan-status.analyzing { color: var(--accent); }
 .scan-status.ready { color: #4a4; }
 .scan-status.uploading { color: #fa0; }
+
+.pulse-dots {
+  display: inline-block;
+  animation: pulse-dots 1.2s ease-in-out infinite;
+}
+@keyframes pulse-dots {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
 
 .scan-txid { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.78rem; color: var(--accent); word-break: break-all; }
 

@@ -278,56 +278,34 @@ async function scanImage(file, zoneName) {
   const refs = await ensureRefs()
   const result = await window.HBValidator.validateCardImage(file, zoneName, refs)
 
-  // Run detector in shadow mode for front scans only
-  if (zoneName === 'front') {
-    result.detector = await runDetectorShadow(file)
-
-    // Log the comparison server-side
-    logDetectorComparison(file, result)
+  // Run card identification for front scans only
+  if (zoneName === 'front' && result.passed && result.uploadBuffer) {
+    result.idResult = await verifyFront(result.uploadBuffer)
+    if (!result.idResult.ok) {
+      // Override passed — identification failure blocks upload
+      result.passed = false
+      result.failures = result.failures || []
+      result.failures.unshift(`Card ID: ${result.idResult.reason}`)
+    }
   }
 
   return result
 }
 
-// Log front-match vs detector comparison to server
-async function logDetectorComparison(file, scanResult) {
+// Verify a front card JPEG via /verify endpoint
+async function verifyFront(uploadBuffer) {
   try {
-    const fm = scanResult.matchedCode
-      ? { code: scanResult.matchedCode, mae: scanResult.mae, matched: scanResult.matched }
-      : { code: null, mae: scanResult.mae, matched: false }
-    const det = scanResult.detector || {}
-    await fetch(`${API}/detector/log`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filename: file.name,
-        frontMatch: fm,
-        detector: {
-          code: det.code || null,
-          distance: det.distance,
-          margin: det.margin,
-          ok: det.ok,
-        },
-      }),
-    })
-  } catch {}
-}
-
-// Run cardid-detector in shadow mode (no gate, just log)
-async function runDetectorShadow(file) {
-  try {
+    const blob = new Blob([uploadBuffer], { type: 'image/jpeg' })
     const formData = new FormData()
-    formData.append('image', file)
-    const resp = await fetch(`${API}/detector/match`, {
+    formData.append('image', blob, 'front.jpg')
+    const resp = await fetch(`${API}/verify`, {
       method: 'POST',
       body: formData,
     })
-    if (!resp.ok) return { ok: false, error: `HTTP ${resp.status}` }
-    const data = await resp.json()
-    if (data.skipped) return { ok: false, skipped: true }
-    return data
+    if (!resp.ok) return { ok: false, reason: `HTTP ${resp.status}` }
+    return await resp.json()
   } catch (e) {
-    return { ok: false, error: e.message }
+    return { ok: false, reason: e.message }
   }
 }
 
@@ -348,7 +326,7 @@ function createScanEntry(zoneName, file, position) {
   const zoneLabel = zoneName === 'front' ? 'Front' : 'Back'
   const imgUrl = URL.createObjectURL(file)
 
-  zoneDiv.innerHTML = `<img src="${imgUrl}" alt="${zoneLabel}" class="zone-result-img" style="opacity:0.5"><input type="file" accept="image/*" style="display:none" />`
+  zoneDiv.innerHTML = `<img src="${imgUrl}" alt="${zoneLabel}" class="zone-result-img" style="opacity:0.5"><div class="card-zone-label-overlay">${zoneLabel}</div><input type="file" accept="image/*" style="display:none" />`
 
   if (barLeft) {
     barLeft.innerHTML = `<button class="scan-btn-remove" onclick="removeScan('${zoneName}', ${position})">Remove</button>`
@@ -406,14 +384,13 @@ function renderScanResult(scan) {
       html += `<div class="scan-detail">Card: ${r.cardWidth}×${r.cardHeight}px</div>`
     }
     html += `<div class="scan-detail">Upload: ${(r.size / 1024).toFixed(1)}KB</div>`
-    // Detector shadow result (front scans only)
-    if (r.detector && !r.detector.skipped) {
-      const d = r.detector
+    // Card identification result (front scans only)
+    if (r.idResult) {
+      const d = r.idResult
       if (d.ok) {
-        const matchIcon = d.code === (r.matchedCode || r.code) ? '✓' : '≠'
-        html += `<div class="scan-detail" style="color:var(--text-dim)">Detector: ${matchIcon} ${d.code} (d=${d.distance} m=${d.margin})</div>`
+        html += `<div class="scan-detail" style="color:var(--text-dim)">ID: ${d.code} (d=${d.distance} m=${d.margin})</div>`
       } else {
-        html += `<div class="scan-detail" style="color:var(--text-dim)">Detector: ${d.reason || d.error || 'fail'}</div>`
+        html += `<div class="scan-detail" style="color:#ef4444">ID: ${d.reason || 'fail'}</div>`
       }
     }
     if (r.backResult) {
@@ -455,7 +432,7 @@ function removeScan(zone, position) {
   if (zone === 'front') {
     if (cardState.front) {
       cardState.front.zoneDiv.classList.remove('passed')
-      cardState.front.zoneDiv.innerHTML = '<div class="card-zone-placeholder">+</div><input type="file" accept="image/*" style="display:none" />'
+      cardState.front.zoneDiv.innerHTML = '<div class="card-zone-placeholder">+</div><div class="card-zone-label-overlay">Front</div><input type="file" accept="image/*" style="display:none" />'
       const barLeft = document.getElementById('bar-left-front')
       const details = document.getElementById('details-front')
       if (barLeft) barLeft.innerHTML = ''
@@ -465,7 +442,7 @@ function removeScan(zone, position) {
   } else if (zone === 'back') {
     if (cardState.back) {
       cardState.back.zoneDiv.classList.remove('passed')
-      cardState.back.zoneDiv.innerHTML = '<div class="card-zone-placeholder">+</div><input type="file" accept="image/*" style="display:none" />'
+      cardState.back.zoneDiv.innerHTML = '<div class="card-zone-placeholder">+</div><div class="card-zone-label-overlay">Back</div><input type="file" accept="image/*" style="display:none" />'
       const barLeft = document.getElementById('bar-left-back')
       const details = document.getElementById('details-back')
       if (barLeft) barLeft.innerHTML = ''

@@ -32,25 +32,15 @@ try {
   console.warn('cardimg-bind not found — CARDSET creation disabled (single uploads only)')
 }
 
-// Front card matcher — reference image comparison
-const { matchFrontCard, getReferenceThumbsBase64 } = require(path.join(__dirname, 'lib', 'front-match.js'))
+// Card identifier — cardid-detector integration
+// Card identification — new unified module
+const { identify, autoRebuildIfNeeded } = require(path.join(__dirname, 'lib', 'card-id.cjs'))
 
-// Detector shadow — pHash-based cardid-detector running in parallel
-const detectorShadow = require(path.join(__dirname, 'lib', 'detector-shadow.js'))
-const detectorCfg = detectorShadow.loadConfig() // { mode, maxDistance, minMargin, detectorPath, referenceDir }
+// Auto-rebuild references if source files changed
+autoRebuildIfNeeded()
 
-// Startup: report detector reference coverage
-if (detectorCfg.mode !== 'off') {
-  const refStatus = detectorShadow.checkReferences(detectorCfg.referenceDir)
-  console.log(`[detector] mode=${detectorCfg.mode} references=${refStatus.total}/${refStatus.expected}`)
-  if (refStatus.missing.length > 0) {
-    console.log(`[detector] missing: ${refStatus.missing.join(', ')}`)
-  }
-  if (detectorCfg.mode === 'enforce' && !refStatus.complete) {
-    console.warn(`[detector] ENFORCE mode blocked — missing ${refStatus.missing.length} references, falling back to shadow`)
-    detectorCfg.mode = 'shadow'
-  }
-}
+const cardIdCfg = require(path.join(__dirname, 'config', 'card-id.json'))
+console.log(`[card-id] maxDistance=${cardIdCfg.maxDistance} minMargin=${cardIdCfg.minMargin}`)
 
 const multer = require('multer')
 const upload = multer({
@@ -264,6 +254,17 @@ async function getOrCreateThumb(buf, hash, width) {
 // --- Express app ---
 
 const app = express()
+
+// --- Localhost-only restriction ---
+// Reject all non-localhost connections unless bypassed by trusted proxy
+app.use((req, res, next) => {
+  const addr = req.ip || req.socket.remoteAddress || ''
+  const isLocal = addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1'
+  if (!isLocal) {
+    return res.status(403).json({ error: 'Localhost only' })
+  }
+  next()
+})
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
@@ -550,28 +551,6 @@ app.get('/references/json', (req, res) => {
 })
 
 // Legacy: Get reference thumbnails for client-side comparison (base64 JPEGs, ~84KB total)
-app.get('/references/fronts', async (req, res) => {
-  try {
-    const thumbs = await getReferenceThumbsBase64()
-    res.json({ thumbs, thumbW: 64, thumbH: 96 })
-  } catch (e) {
-    res.status(500).json({ error: e.message })
-  }
-})
-
-// Server-side match — accepts a processed JPEG, returns best match
-// Used as fallback or for server-side validation
-const matchUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
-app.post('/references/match', matchUpload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No image provided' })
-    const result = await matchFrontCard(req.file.buffer)
-    res.json(result)
-  } catch (e) {
-    res.status(500).json({ error: e.message })
-  }
-})
-
 // ─── API: Upload (receives client-processed JPEGs) ───
 
 app.get('/wallet/status', async (req, res) => {
@@ -604,82 +583,32 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000)
 
-// ─── Detector shadow endpoints ───
+// ─── Card identification endpoint ───
 
-// Detector status: mode, reference coverage, thresholds
-app.get('/detector/status', (req, res) => {
-  const cfg = detectorShadow.loadConfig()
-  if (cfg.mode === 'off') {
-    return res.json({ mode: 'off', message: 'Detector is disabled' })
-  }
-  const refs = detectorShadow.checkReferences(cfg.referenceDir)
-  res.json({
-    mode: cfg.mode,
-    maxDistance: cfg.maxDistance,
-    minMargin: cfg.minMargin,
-    allowDuplicates: cfg.allowDuplicates,
-    references: refs,
-  })
-})
-
-// Update detector config (mode, thresholds)
-app.post('/detector/config', (req, res) => {
-  const cfg = detectorShadow.loadConfig()
-  const update = req.body || {}
-
-  // Validate mode transitions
-  if (update.mode) {
-    if (update.mode === 'enforce') {
-      const refs = detectorShadow.checkReferences(cfg.referenceDir)
-      if (!refs.complete) {
-        return res.status(400).json({
-          error: `Cannot enable enforce mode: ${refs.missing.length} card codes missing references`,
-          missing: refs.missing,
-        })
-      }
-    }
-    cfg.mode = update.mode
-  }
-  if (update.maxDistance !== undefined) cfg.maxDistance = update.maxDistance
-  if (update.minMargin !== undefined) cfg.minMargin = update.minMargin
-  if (update.allowDuplicates !== undefined) cfg.allowDuplicates = update.allowDuplicates
-
-  detectorShadow.saveConfig(cfg)
-  res.json({ ok: true, config: cfg })
-})
-
-// Log comparison entry (called by client after both matchers run)
-app.post('/detector/log', (req, res) => {
-  const cfg = detectorShadow.loadConfig()
-  if (cfg.mode === 'off') return res.json({ skipped: true })
-  detectorShadow.logComparison({
-    ...req.body,
-    timestamp: new Date().toISOString(),
-  })
-  res.json({ ok: true })
-})
-
-// Run detector on an image — shadow mode logs result, enforce mode gates
-const detectorUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
-app.post('/detector/match', detectorUpload.single('image'), async (req, res) => {
-  const cfg = detectorShadow.loadConfig()
-  if (cfg.mode === 'off') {
-    return res.json({ mode: 'off', skipped: true })
-  }
+// POST /verify — identify a front card JPEG
+// Input: multipart form with 'image' field (processed JPEG from browser)
+// Output: { ok, code, distance, margin, reason }
+const verifyUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
+app.post('/verify', verifyUpload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image provided' })
-
   try {
-    const result = await detectorShadow.runDetector(req.file.buffer, cfg)
-    res.json({ mode: cfg.mode, ...result })
+    const result = await identify(req.file.buffer)
+    res.json(result)
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
 })
 
-// Detector comparison report — where the two matchers agree/disagree
-app.get('/detector/report', (req, res) => {
-  const report = detectorShadow.generateReport()
-  res.json(report)
+// GET /verify/status — show config + reference count
+app.get('/verify/status', (req, res) => {
+  const refsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'card-refs.json'), 'utf8'))
+  res.json({
+    maxDistance: cardIdCfg.maxDistance,
+    minMargin: cardIdCfg.minMargin,
+    indexedCodes: refsData.indexedCodes,
+    totalCodes: refsData.totalCodes,
+    missingCodes: refsData.missingCodes,
+  })
 })
 
 // Upload processed JPEGs — returns jobId immediately, processes in background
@@ -751,6 +680,25 @@ async function processUploadJob(jobId, files, ip) {
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
+    job.progress = { step: i, total: files.length, message: `Verifying ${file.name} (${i + 1}/${files.length})...` }
+
+    // --- Server-side card identification gate ---
+    let idResult
+    try {
+      idResult = await identify(file.buffer)
+    } catch (e) {
+      idResult = { ok: false, code: null, distance: null, margin: null, reason: `id_error: ${e.message}` }
+    }
+
+    if (!idResult.ok) {
+      job.errors.push({ filename: file.name, error: `Rejected: ${idResult.reason}` })
+      logEntry({ event: 'image-rejected', jobId, filename: file.name, reason: idResult.reason, code: idResult.code, distance: idResult.distance, margin: idResult.margin })
+      continue
+    }
+
+    logEntry({ event: 'image-verified', jobId, filename: file.name, code: idResult.code, distance: idResult.distance, margin: idResult.margin })
+
+    // --- Upload to chain ---
     job.progress = { step: i, total: files.length, message: `Uploading ${file.name} (${i + 1}/${files.length})...` }
     if (i > 0) await new Promise(r => setTimeout(r, 2000))
     try {

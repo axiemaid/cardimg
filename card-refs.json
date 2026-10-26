@@ -1,0 +1,100 @@
+{
+  "version": 3,
+  "generated": "2026-10-26T02:46:24.122Z",
+  "totalCodes": 42,
+  "indexedCodes": 16,
+  "missingCodes": [
+    "C01",
+    "C03",
+    "C04",
+    "C05",
+    "C07",
+    "C09",
+    "C12",
+    "C13",
+    "C14",
+    "C15",
+    "C16",
+    "C19",
+    "C21",
+    "C22",
+    "C24",
+    "C25",
+    "C26",
+    "C28",
+    "C34",
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "S06",
+    "S08"
+  ],
+  "refs": [
+    {
+      "code": "C02",
+      "hash": "a1b6965a3964f4a9"
+    },
+    {
+      "code": "C06",
+      "hash": "723c09f4fc8c96a3"
+    },
+    {
+      "code": "C08",
+      "hash": "b39607f63898e929"
+    },
+    {
+      "code": "C10",
+      "hash": "a32ce9f4f98e1e01"
+    },
+    {
+      "code": "C11",
+      "hash": "e3d6093cf8c6862b"
+    },
+    {
+      "code": "C17",
+      "hash": "e9a447163dacd683"
+    },
+    {
+      "code": "C18",
+      "hash": "9bd2e1f61686ac29"
+    },
+    {
+      "code": "C20",
+      "hash": "899c6d767cfc0303"
+    },
+    {
+      "code": "C23",
+      "hash": "03d2c6965e79a9a9"
+    },
+    {
+      "code": "C27",
+      "hash": "a59ce3e64e9c98a1"
+    },
+    {
+      "code": "C29",
+      "hash": "8e9c793039ace6a3"
+    },
+    {
+      "code": "C30",
+      "hash": "273ce9f4790b9603"
+    },
+    {
+      "code": "C31",
+      "hash": "cbd80b36a1f85e0b"
+    },
+    {
+      "code": "C32",
+      "hash": "383823f6d8f3a623"
+    },
+    {
+      "code": "C33",
+      "hash": "7158492ce3f6d4a9"
+    },
+    {
+      "code": "S07",
+      "hash": "467687964b68fc29"
+    }
+  ]
+}

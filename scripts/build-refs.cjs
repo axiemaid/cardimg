@@ -3,13 +3,9 @@
  * build-refs.cjs — Build card-refs.json from reference images
  * 
  * For each file in cardid-detector/references/ named C## or S## (optionally _n):
- *   1. Decode image
- *   2. Run through the browser crop pipeline (card-crop.js — same as validator.js)
- *   3. Ensure portrait orientation
- *   4. Encode to JPEG q0.90 (same as browser output)
- *   5. Area-average resize to 32×32 grayscale
- *   6. DCT pHash (64-bit)
- *   7. Write { code, hash (hex) } to card-refs.json
+ *   1. Read file into buffer
+ *   2. Decode with sharp → area-average resize to 32×32 grayscale → DCT pHash (64-bit)
+ *   3. Write { code, hash (hex) } to card-refs.json
  * 
  * Lists skipped files and missing codes.
  * 
@@ -25,11 +21,10 @@ try { sharp = require('sharp') } catch {
   process.exit(1)
 }
 
-const { cropCardFromRGBA } = require('../lib/card-crop.js')
 const {
-  _areaAverageResizeToGray: areaAverageResizeToGray,
-  _computePhash: computePhash,
-  _hashToHex: hashToHex,
+  areaAverageResizeToGray,
+  computePhash,
+  hashToHex,
   PHASH_SIZE,
 } = require('../lib/card-id.cjs')
 
@@ -46,90 +41,6 @@ function parseCode(filename) {
   const base = path.basename(filename, ext)
   const m = base.match(/^([CS]\d{2})/i)
   return m ? m[1].toUpperCase() : null
-}
-
-async function decodeToRGBA(filePath) {
-  const { data, info } = await sharp(filePath)
-    .removeAlpha()
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-  return { data: new Uint8Array(data), w: info.width, h: info.height }
-}
-
-async function rgbaToJPEG(rgba, w, h, quality = 0.90) {
-  const buf = Buffer.from(rgba)
-  return sharp(buf, { raw: { width: w, height: h, channels: 4 } })
-    .jpeg({ quality: Math.round(quality * 100) })
-    .toBuffer()
-}
-
-async function processReference(filePath) {
-  // Full browser pipeline: decode → crop → portrait → JPEG q90 → hash
-  const { data, w, h } = await decodeToRGBA(filePath)
-
-  // Crop using shared card-crop.js (same as validator.js)
-  const cropped = cropCardFromRGBA(data, w, h)
-  let cropRGBA = data
-  let cropW = w
-  let cropH = h
-  let cropInfo = 'none'
-
-  if (cropped) {
-    cropRGBA = cropped.rgba
-    cropW = cropped.w
-    cropH = cropped.h
-    cropInfo = cropped.crop ? 'cropped' : 'no-crop-needed'
-  } else {
-    cropInfo = 'no-edges-detected'
-  }
-
-  // Ensure portrait (rotate 90 CW if landscape)
-  let finalRGBA = cropRGBA
-  let finalW = cropW
-  let finalH = cropH
-  if (finalW > finalH) {
-    const rotated = new Uint8Array(finalW * finalH * 4)
-    for (let y = 0; y < finalH; y++) {
-      for (let x = 0; x < finalW; x++) {
-        const srcIdx = (y * finalW + x) * 4
-        const nx = finalH - 1 - y
-        const ny = x
-        const dstIdx = (ny * finalH + nx) * 4
-        rotated[dstIdx] = cropRGBA[srcIdx]
-        rotated[dstIdx + 1] = cropRGBA[srcIdx + 1]
-        rotated[dstIdx + 2] = cropRGBA[srcIdx + 2]
-        rotated[dstIdx + 3] = cropRGBA[srcIdx + 3]
-      }
-    }
-    finalRGBA = rotated
-    const tmp = finalW
-    finalW = finalH
-    finalH = tmp
-  }
-
-  // Encode to JPEG q0.90 (same as browser)
-  const jpegBuf = await rgbaToJPEG(finalRGBA, finalW, finalH, 0.90)
-
-  // Decode JPEG back to RGBA for hashing (simulates what identify() receives)
-  const { data: jpegRGBA, info: jpegInfo } = await sharp(jpegBuf)
-    .removeAlpha()
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-
-  // Area-average resize to 32×32 grayscale
-  const gray32 = areaAverageResizeToGray(new Uint8Array(jpegRGBA), jpegInfo.width, jpegInfo.height, PHASH_SIZE, PHASH_SIZE)
-
-  // DCT pHash
-  const hash = computePhash(gray32)
-
-  return {
-    hash: hashToHex(hash),
-    cropInfo,
-    dimensions: `${jpegInfo.width}×${jpegInfo.height}`,
-    jpegSize: jpegBuf.length,
-  }
 }
 
 async function main() {
@@ -157,7 +68,6 @@ async function main() {
       skipped.push({ file, reason: 'cannot_parse_code' })
       continue
     }
-    // Only take first file per code (ignore _n variants for reference building)
     if (!filesByCode[code]) {
       filesByCode[code] = file
     } else {
@@ -191,11 +101,21 @@ async function main() {
   for (const code of presentCodes) {
     const file = filesByCode[code]
     const fullPath = path.join(refDir, file)
+    const fileBuffer = fs.readFileSync(fullPath)
 
     try {
-      const result = await processReference(fullPath)
-      refs.push({ code, hash: result.hash })
-      console.log(`  ${code}: ${result.dimensions} crop=${result.cropInfo} jpeg=${(result.jpegSize / 1024).toFixed(1)}KB hash=${result.hash}`)
+      const { data, info } = await sharp(fileBuffer)
+        .removeAlpha()
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+
+      // Area-average resize to 32×32 grayscale → DCT pHash
+      const gray32 = areaAverageResizeToGray(new Uint8Array(data), info.width, info.height, PHASH_SIZE, PHASH_SIZE)
+      const hash = computePhash(gray32)
+
+      refs.push({ code, hash: hashToHex(hash) })
+      console.log(`  ${code}: ${info.width}×${info.height} hash=${hashToHex(hash)}`)
     } catch (e) {
       console.error(`  ${code}: ERROR — ${e.message}`)
     }

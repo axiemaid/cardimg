@@ -585,8 +585,8 @@ setInterval(() => {
 
 // ─── Card identification endpoint ───
 
-// POST /verify — identify a front card JPEG
-// Input: multipart form with 'image' field (processed JPEG from browser)
+// POST /verify — identify a front card JPEG (already cropped by browser)
+// Input: multipart form with 'image' field (cropped JPEG from browser validator)
 // Output: { ok, code, distance, margin, reason }
 const verifyUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 app.post('/verify', verifyUpload.single('image'), async (req, res) => {
@@ -682,7 +682,7 @@ async function processUploadJob(jobId, files, ip) {
     const file = files[i]
     job.progress = { step: i, total: files.length, message: `Verifying ${file.name} (${i + 1}/${files.length})...` }
 
-    // --- Server-side card identification gate ---
+    // --- Server-side identification gate (browser already cropped) ---
     let idResult
     try {
       idResult = await identify(file.buffer)

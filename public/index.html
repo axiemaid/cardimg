@@ -32,12 +32,13 @@
             <div class="card-zone" data-zone="front">
               <div class="card-zone-drop" id="zone-front">
                 <div class="card-zone-placeholder">+</div>
+                <div class="card-zone-label-overlay">Front</div>
                 <input type="file" accept="image/*" style="display:none" />
               </div>
               <div class="card-zone-summary" id="summary-front">
                 <div class="card-zone-bar">
                   <div class="card-zone-bar-left" id="bar-left-front"></div>
-                  <div class="card-zone-label">Front</div>
+                  <div class="card-zone-bar-spacer"></div>
                   <div class="card-zone-bar-right"></div>
                 </div>
                 <div class="card-zone-details" id="details-front"></div>
@@ -46,12 +47,13 @@
             <div class="card-zone" data-zone="back">
               <div class="card-zone-drop" id="zone-back">
                 <div class="card-zone-placeholder">+</div>
+                <div class="card-zone-label-overlay">Back</div>
                 <input type="file" accept="image/*" style="display:none" />
               </div>
               <div class="card-zone-summary" id="summary-back">
                 <div class="card-zone-bar">
                   <div class="card-zone-bar-left" id="bar-left-back"></div>
-                  <div class="card-zone-label">Back</div>
+                  <div class="card-zone-bar-spacer"></div>
                   <div class="card-zone-bar-right"></div>
                 </div>
                 <div class="card-zone-details" id="details-back"></div>
@@ -130,6 +132,7 @@
   </footer>
 
   <script src="/config.js"></script>
+  <script src="/opencv.js" async></script>
   <script src="/validator.js"></script>
   <script src="/app.js"></script>
 </body>
